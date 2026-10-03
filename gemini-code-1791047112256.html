@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>週刊シンセ界 #1 - Dharma</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #0b0b10;
+      --panel-bg: rgba(18, 18, 26, 0.88);
+      --accent-red: #ff3344;
+      --accent-gold: #ffcc00;
+      --accent-cyan: #00f0ff;
+      --accent-magenta: #ff007f;
+      --accent-green: #00ff66;
+      --accent-orange: #ff6600;
+      --text-main: #f0f0f5;
+      --text-dim: #7a7a8c;
+      --border-color: #262636;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Start Overlay */
+    #overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(8, 8, 12, 0.94);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+    #overlay h1 { font-size: 2.2rem; color: var(--accent-red); letter-spacing: 4px; margin-bottom: 8px; }
+    #overlay h2 { font-size: 1.4rem; color: var(--accent-gold); margin-bottom: 24px; font-weight: 400; letter-spacing: 2px; }
+    .start-btn {
+      padding: 14px 38px;
+      background: linear-gradient(135deg, var(--accent-red), #aa0011);
+      border: 2px solid var(--accent-gold);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 30px;
+      box-shadow: 0 0 20px rgba(255, 51, 68, 0.5);
+      transition: all 0.2s;
+    }
+    #overlay:hover .start-btn { transform: scale(1.05); box-shadow: 0 0 30px rgba(255, 51, 68, 0.8); }
+
+    /* Header */
+    header {
+      height: 48px;
+      padding: 0 20px;
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+    }
+    .logo { font-weight: bold; color: var(--accent-gold); font-size: 1.05rem; }
+    .scale-indicator {
+      font-size: 0.85rem;
+      padding: 4px 14px;
+      border-radius: 12px;
+      background: rgba(255, 51, 68, 0.15);
+      border: 1px solid var(--accent-red);
+      color: var(--accent-red);
+      transition: all 0.3s;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .scale-indicator.dohatsuten {
+      background: #ff0000;
+      color: #ffffff;
+      border-color: #ffcc00;
+      box-shadow: 0 0 15px rgba(255, 0, 0, 0.8);
+      animation: pulse 0.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.08); }
+    }
+
+    /* Main Container */
+    .main-container {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 3D Canvas */
+    #canvas-container {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      cursor: grab;
+    }
+    #canvas-container:active { cursor: grabbing; }
+
+    /* Control Panel */
+    .control-panel {
+      width: 340px;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border-color);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+    }
+    .panel-section {
+      background: rgba(12, 12, 18, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .panel-title {
+      font-size: 0.75rem;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    select {
+      width: 100%;
+      padding: 8px;
+      background: #14141f;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      outline: none;
+      font-size: 0.85rem;
+    }
+
+    /* FX Sliders & Controls */
+    .fx-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 10px;
+      background: #12121c;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+    .fx-item:last-child { margin-bottom: 0; }
+    .fx-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .fx-title { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .fx-cube-tag { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+    .fx-val { font-family: monospace; font-size: 0.8rem; color: var(--accent-cyan); }
+    .fx-slider {
+      width: 100%;
+      height: 4px;
+      accent-color: var(--accent-cyan);
+      cursor: pointer;
+    }
+
+    /* Parameter Cards */
+    .param-card {
+      background: #12121c;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.2s;
+    }
+    .param-card:last-child { margin-bottom: 0; }
+    .param-card.active { border-color: rgba(255, 255, 255, 0.2); }
+    
+    .param-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .param-name { font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .param-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    
+    .axis-tag {
+      font-size: 0.65rem;
+      padding: 2px 5px;
+      background: #1a1a2a;
+      color: var(--text-dim);
+      border-radius: 3px;
+      border: 1px solid #2a2a3d;
+    }
+
+    .param-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .param-val { font-family: monospace; font-size: 0.8rem; color: var(--accent-cyan); }
+    .param-slider { width: 100%; height: 4px; accent-color: var(--accent-gold); cursor: pointer; }
+
+    .mod-toggle {
+      font-size: 0.68rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: #181824;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .mod-toggle.active {
+      background: var(--accent-red);
+      color: #fff;
+      border-color: var(--accent-red);
+      box-shadow: 0 0 8px rgba(255, 51, 68, 0.4);
+    }
+
+    /* Bottom Panel */
+    .bottom-panel {
+      height: 160px;
+      background: var(--panel-bg);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+    .seq-header {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .btn {
+      padding: 6px 16px;
+      background: #1c1c28;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .btn.active { background: var(--accent-cyan); color: #000; font-weight: bold; }
+
+    .seq-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 4px;
+      padding: 8px 16px;
+      align-items: center;
+    }
+    .seq-step {
+      height: 100%;
+      background: #12121a;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      cursor: pointer;
+    }
+    .seq-step.active { background: rgba(0, 240, 255, 0.12); border-color: var(--accent-cyan); }
+    .seq-step.current { border-color: var(--accent-gold); box-shadow: 0 0 8px rgba(255, 204, 0, 0.3); }
+    .seq-led { width: 5px; height: 5px; border-radius: 50%; background: #2a2a3a; }
+    .seq-step.active .seq-led { background: var(--accent-cyan); }
+    .seq-step.current .seq-led { background: var(--accent-gold); }
+
+    #visualizer { width: 100%; height: 32px; background: #06060a; }
+  </style>
+</head>
+<body>
+
+  <div id="overlay">
+    <h1>週刊シンセ界 #1</h1>
+    <h2>Dharma</h2>
+    <div class="start-btn">タップして音を起動</div>
+  </div>
+
+  <header>
+    <div class="logo">週刊シンセ界 #1 : Dharma</div>
+    <div class="scale-indicator" id="scale-display">法の乱れ：レベル1</div>
+  </header>
+
+  <div class="main-container">
+    <div id="canvas-container"></div>
+
+    <div class="control-panel">
+      <!-- 波形プリセット -->
+      <div class="panel-section">
+        <div class="panel-title">音色プリセット</div>
+        <select id="preset-select">
+          <option value="kirakira">キラキラ</option>
+          <option value="pikopiko">ピコピコ</option>
+          <option value="kankan" selected>カンカン</option>
+          <option value="pokopoko">ポコポコ</option>
+          <option value="fuwafuwa">ふわふわ</option>
+        </select>
+      </div>
+
+      <!-- エフェクターセクション -->
+      <div class="panel-section">
+        <div class="panel-title">エフェクター (3Dキューブ連動)</div>
+        
+        <div class="fx-item">
+          <div class="fx-top">
+            <span class="fx-title"><span class="fx-cube-tag" style="background:#00f0ff;"></span>ディレイ</span>
+            <span class="fx-val" id="val-fx-delay">0%</span>
+            <button class="mod-toggle active" id="mod-fx-delay" data-fx="delay">連動 ON</button>
+          </div>
+          <input type="range" class="fx-slider" id="fx-delay" min="0" max="100" value="0">
+        </div>
+
+        <div class="fx-item">
+          <div class="fx-top">
+            <span class="fx-title"><span class="fx-cube-tag" style="background:#a000ff;"></span>リバーブ</span>
+            <span class="fx-val" id="val-fx-reverb">0%</span>
+            <button class="mod-toggle active" id="mod-fx-reverb" data-fx="reverb">連動 ON</button>
+          </div>
+          <input type="range" class="fx-slider" id="fx-reverb" min="0" max="100" value="0">
+        </div>
+
+        <div class="fx-item">
+          <div class="fx-top">
+            <span class="fx-title"><span class="fx-cube-tag" style="background:#ff007f;"></span>コーラス</span>
+            <span class="fx-val" id="val-fx-chorus">0%</span>
+            <button class="mod-toggle active" id="mod-fx-chorus" data-fx="chorus">連動 ON</button>
+          </div>
+          <input type="range" class="fx-slider" id="fx-chorus" min="0" max="100" value="0">
+        </div>
+
+        <div class="fx-item">
+          <div class="fx-top">
+            <span class="fx-title"><span class="fx-cube-tag" style="background:#ffcc00;"></span>トレモロ</span>
+            <span class="fx-val" id="val-fx-tremolo">0%</span>
+            <button class="mod-toggle active" id="mod-fx-tremolo" data-fx="tremolo">連動 ON</button>
+          </div>
+          <input type="range" class="fx-slider" id="fx-tremolo" min="0" max="100" value="0">
+        </div>
+
+        <div class="fx-item">
+          <div class="fx-top">
+            <span class="fx-title"><span class="fx-cube-tag" style="background:#ff6600;"></span>リングモジュレーター</span>
+            <span class="fx-val" id="val-fx-ringmod">0%</span>
+            <button class="mod-toggle active" id="mod-fx-ringmod" data-fx="ringmod">連動 ON</button>
+          </div>
+          <input type="range" class="fx-slider" id="fx-ringmod" min="0" max="100" value="0">
+        </div>
+
+        <!-- 隠しエフェクト：ビットクラッシャー インジケーター -->
+        <div class="fx-item" id="bitcrusher-ui" style="border-color: var(--accent-red); display:none;">
+          <div class="fx-top">
+            <span class="fx-title" style="color:var(--accent-red);"><span class="fx-cube-tag" style="background:#ff0000;"></span>ビットクラッシャー (4bit)</span>
+            <span class="fx-val" id="val-fx-bitcrusher" style="color:var(--accent-red);">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 音色パラメーター -->
+      <div class="panel-section">
+        <div class="panel-title">音色パラメーター (3Dオーブ連動)</div>
+
+        <div class="param-card active" id="card-wtPos">
+          <div class="param-top">
+            <span class="param-name"><span class="param-dot" style="background:var(--accent-cyan);"></span>WT Position</span>
+            <span class="axis-tag">X軸: 前後傾き</span>
+          </div>
+          <input type="range" class="param-slider" id="slider-wtPos" min="0" max="100" value="50">
+          <div class="param-bottom">
+            <span class="param-val" id="val-wtPos">0.50</span>
+            <button class="mod-toggle active" data-param="wtPos">連動 ON</button>
+          </div>
+        </div>
+
+        <div class="param-card active" id="card-cutoff">
+          <div class="param-top">
+            <span class="param-name"><span class="param-dot" style="background:var(--accent-gold);"></span>Cutoff</span>
+            <span class="axis-tag">Y軸: ひねり運動</span>
+          </div>
+          <input type="range" class="param-slider" id="slider-cutoff" min="100" max="4000" value="400">
+          <div class="param-bottom">
+            <span class="param-val" id="val-cutoff">400 Hz</span>
+            <button class="mod-toggle active" data-param="cutoff">連動 ON</button>
+          </div>
+        </div>
+
+        <div class="param-card active" id="card-hardness">
+          <div class="param-top">
+            <span class="param-name"><span class="param-dot" style="background:var(--accent-magenta);"></span>硬さ (ADSR)</span>
+            <span class="axis-tag">Z軸: 左右傾き</span>
+          </div>
+          <input type="range" class="param-slider" id="slider-hardness" min="0" max="100" value="50">
+          <div class="param-bottom">
+            <span class="param-val" id="val-hardness">0.50</span>
+            <button class="mod-toggle active" data-param="hardness">連動 ON</button>
+          </div>
+        </div>
+
+        <div class="param-card active" id="card-pan">
+          <div class="param-top">
+            <span class="param-name"><span class="param-dot" style="background:var(--accent-orange);"></span>Pan</span>
+            <span class="axis-tag">Z軸: 定位スライド</span>
+          </div>
+          <input type="range" class="param-slider" id="slider-pan" min="-100" max="100" value="0">
+          <div class="param-bottom">
+            <span class="param-val" id="val-pan">0.00</span>
+            <button class="mod-toggle active" data-param="pan">連動 ON</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-panel">
+    <div class="seq-header">
+      <button class="btn" id="seq-play-btn">再生 / 停止</button>
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.85rem;">
+        <span>BPM: <strong id="bpm-val">120</strong></span>
+        <input type="range" id="bpm-slider" min="40" max="240" value="120" style="width:100px; accent-color:var(--accent-cyan);">
+      </div>
+    </div>
+
+    <div class="seq-grid" id="seq-grid"></div>
+    <canvas id="visualizer"></canvas>
+  </div>
+
+  <script>
+    // --- Base Parameters & States ---
+    const baseParams = { wtPos: 0.50, cutoff: 400, hardness: 0.50, pan: 0.00 };
+    const currentParams = { ...baseParams };
+    const modStates = { wtPos: true, cutoff: true, hardness: true, pan: true };
+
+    const baseFX = { delay: 0, reverb: 0, chorus: 0, tremolo: 0, ringmod: 0 };
+    const effectiveFX = { ...baseFX };
+    const fxModStates = { delay: true, reverb: true, chorus: true, tremolo: true, ringmod: true };
+
+    // --- 怒髪天モード & ビットクラッシャーの状態管理 ---
+    let isDohatsutenMode = false;
+    let dohatsutenStartTime = 0;
+    let bitcrusherSend = 0; // 0 ～ 100
+
+    // --- Web Audio API & FX Nodes ---
+    let audioCtx = null, masterGain, filterNode, pannerNode, analyserNode;
+    let delayNode, delayFeedback, delayDryGain, delayWetGain;
+    let reverbConvolver, reverbDryGain, reverbWetGain;
+    let chorusDelay, chorusLFO, chorusLFOGain, chorusDryGain, chorusWetGain;
+    let tremoloLFO, tremoloGain, tremoloDepthGain;
+    let ringModOsc, ringModGainNode, ringModDryGain, ringModWetGain;
+    
+    // Bitcrusher Node & Gains
+    let bitcrusherNode, bitcrusherDryGain, bitcrusherWetGain;
+
+    let isAudioInit = false;
+
+    // ADSR Envelope
+    function getEnvelopeParams(preset, hardness) {
+      const h = Math.max(0, Math.min(1, hardness));
+      if (preset === 'fuwafuwa') {
+        return {
+          attack: 0.3 + (1 - h) * 1.2,
+          decay: 0.8 + (1 - h) * 1.5,
+          sustain: 0.3 * (1 - h * 0.5),
+          release: 1.0 + (1 - h) * 2.0
+        };
+      } else {
+        return {
+          attack: 0.001 + (1 - h) * 0.03,
+          decay: 0.03 + (1 - h) * 0.25,
+          sustain: 0.0,
+          release: 0.02 + (1 - h) * 0.3
+        };
+      }
+    }
+
+    // --- 旋法 6段階定義（法の乱れ：レベル1〜6） ---
+    const SCALES = {
+      0: { name: '法の乱れ：レベル1', freqs: [130.81, 196.00, 293.66, 440.00, 261.63, 392.00] },
+      1: { name: '法の乱れ：レベル2', freqs: [130.81, 174.61, 293.66, 392.00, 261.63, 349.23] },
+      2: { name: '法の乱れ：レベル3', freqs: [116.54, 155.56, 261.63, 349.23, 233.08, 311.13] },
+      3: { name: '法の乱れ：レベル4', freqs: [103.83, 155.56, 261.63, 349.23, 207.65, 311.13] },
+      4: { name: '法の乱れ：レベル5', freqs: [103.83, 146.83, 233.08, 392.00, 207.65, 293.66] },
+      5: { name: '法の乱れ：レベル6', freqs: [116.54, 146.83, 261.63, 415.30, 233.08, 293.66] }
+    };
+    let currentScaleIdx = 0;
+    let lastScaleChangeTime = 0;
+
+    function createReverbBuffer(ctx, duration = 2.5, decay = 3.0) {
+      const sampleRate = ctx.sampleRate;
+      const length = sampleRate * duration;
+      const impulse = ctx.createBuffer(2, length, sampleRate);
+      const left = impulse.getChannelData(0);
+      const right = impulse.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        const n = i / length;
+        const e = Math.exp(-n * decay);
+        left[i] = (Math.random() * 2 - 1) * e;
+        right[i] = (Math.random() * 2 - 1) * e;
+      }
+      return impulse;
+    }
+
+    // 4bit ビットクラッシャー（強力なドライブ歪み付き）
+    function createBitcrusherProcessor(ctx) {
+      const bufferSize = 4096;
+      const node = ctx.createScriptProcessor(bufferSize, 1, 1);
+      node.onaudioprocess = function(e) {
+        const input = e.inputBuffer.getChannelData(0);
+        const output = e.outputBuffer.getChannelData(0);
+        const bits = 4; // 4bit
+        const step = Math.pow(0.5, bits - 1);
+        const drive = 3.5; // 激しい歪み
+
+        for (let i = 0; i < input.length; i++) {
+          let x = input[i] * drive;
+          x = Math.max(-1.0, Math.min(1.0, x)); // ハードクリッピング
+          output[i] = Math.floor(x / step) * step; // 4bit量子化
+        }
+      };
+      return node;
+    }
+
+    function initAudio() {
+      if (isAudioInit) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.5;
+
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 256;
+
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = 400;
+
+      pannerNode = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : audioCtx.createPanner();
+
+      // Bitcrusher setup
+      bitcrusherNode = createBitcrusherProcessor(audioCtx);
+      bitcrusherDryGain = audioCtx.createGain();
+      bitcrusherWetGain = audioCtx.createGain();
+
+      // FX Nodes
+      ringModOsc = audioCtx.createOscillator();
+      ringModOsc.type = 'sine';
+      ringModOsc.frequency.value = 350;
+      ringModOsc.start();
+
+      ringModGainNode = audioCtx.createGain();
+      ringModOsc.connect(ringModGainNode.gain);
+
+      ringModDryGain = audioCtx.createGain();
+      ringModWetGain = audioCtx.createGain();
+
+      tremoloGain = audioCtx.createGain();
+      tremoloDepthGain = audioCtx.createGain();
+      tremoloLFO = audioCtx.createOscillator();
+      tremoloLFO.type = 'sine';
+      tremoloLFO.frequency.value = 6.0;
+      tremoloLFO.connect(tremoloDepthGain);
+      tremoloDepthGain.connect(tremoloGain.gain);
+      tremoloGain.gain.value = 1.0;
+      tremoloLFO.start();
+
+      chorusDelay = audioCtx.createDelay();
+      chorusDelay.delayTime.value = 0.015;
+      chorusLFO = audioCtx.createOscillator();
+      chorusLFO.frequency.value = 1.5;
+      chorusLFOGain = audioCtx.createGain();
+      chorusLFOGain.gain.value = 0.002;
+      chorusLFO.connect(chorusLFOGain);
+      chorusLFOGain.connect(chorusDelay.delayTime);
+      chorusLFO.start();
+
+      chorusDryGain = audioCtx.createGain();
+      chorusWetGain = audioCtx.createGain();
+
+      delayNode = audioCtx.createDelay();
+      delayNode.delayTime.value = 0.25;
+      delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.value = 0.4;
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+
+      delayDryGain = audioCtx.createGain();
+      delayWetGain = audioCtx.createGain();
+
+      reverbConvolver = audioCtx.createConvolver();
+      reverbConvolver.buffer = createReverbBuffer(audioCtx, 2.5, 3.0);
+
+      reverbDryGain = audioCtx.createGain();
+      reverbWetGain = audioCtx.createGain();
+
+      // Routing
+      const ringModBus = audioCtx.createGain();
+      ringModDryGain.connect(ringModBus);
+      ringModGainNode.connect(ringModWetGain);
+      ringModWetGain.connect(ringModBus);
+
+      ringModBus.connect(filterNode);
+      filterNode.connect(tremoloGain);
+
+      const chorusBus = audioCtx.createGain();
+      tremoloGain.connect(chorusDryGain);
+      chorusDryGain.connect(chorusBus);
+      tremoloGain.connect(chorusDelay);
+      chorusDelay.connect(chorusWetGain);
+      chorusWetGain.connect(chorusBus);
+
+      chorusBus.connect(pannerNode);
+
+      const delayBus = audioCtx.createGain();
+      pannerNode.connect(delayDryGain);
+      delayDryGain.connect(delayBus);
+      pannerNode.connect(delayNode);
+      delayNode.connect(delayWetGain);
+      delayWetGain.connect(delayBus);
+
+      const fxOutputBus = audioCtx.createGain();
+      delayBus.connect(reverbDryGain);
+      reverbDryGain.connect(fxOutputBus);
+      delayBus.connect(reverbConvolver);
+      reverbConvolver.connect(reverbWetGain);
+      reverbWetGain.connect(fxOutputBus);
+
+      // Bitcrusher Parallel Routing
+      fxOutputBus.connect(bitcrusherDryGain);
+      bitcrusherDryGain.connect(masterGain);
+
+      fxOutputBus.connect(bitcrusherNode);
+      bitcrusherNode.connect(bitcrusherWetGain);
+      bitcrusherWetGain.connect(masterGain);
+
+      masterGain.connect(analyserNode);
+      analyserNode.connect(audioCtx.destination);
+
+      updateFXAudioNodes();
+      isAudioInit = true;
+    }
+
+    function updateFXAudioNodes() {
+      if (!isAudioInit || !audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const tc = 0.04;
+
+      const dVal = effectiveFX.delay / 100;
+      delayDryGain.gain.setTargetAtTime(1.0 - dVal * 0.35, now, tc);
+      delayWetGain.gain.setTargetAtTime(dVal * 0.65, now, tc);
+
+      const rVal = effectiveFX.reverb / 100;
+      reverbDryGain.gain.setTargetAtTime(1.0 - rVal * 0.4, now, tc);
+      reverbWetGain.gain.setTargetAtTime(rVal * 0.75, now, tc);
+
+      const cVal = effectiveFX.chorus / 100;
+      chorusDryGain.gain.setTargetAtTime(1.0 - cVal * 0.3, now, tc);
+      chorusWetGain.gain.setTargetAtTime(cVal * 0.5, now, tc);
+
+      const tVal = effectiveFX.tremolo / 100;
+      tremoloDepthGain.gain.setTargetAtTime(tVal * 0.75, now, tc);
+
+      const rmVal = effectiveFX.ringmod / 100;
+      ringModDryGain.gain.setTargetAtTime(1.0 - rmVal * 0.5, now, tc);
+      ringModWetGain.gain.setTargetAtTime(rmVal * 0.6, now, tc);
+
+      // Bitcrusher Mix Level
+      const bcVal = bitcrusherSend / 100;
+      bitcrusherDryGain.gain.setTargetAtTime(1.0 - bcVal * 0.6, now, tc);
+      bitcrusherWetGain.gain.setTargetAtTime(bcVal * 0.9, now, tc);
+    }
+
+    function createWavetable(preset, position) {
+      const real = new Float32Array(16);
+      const imag = new Float32Array(16);
+      
+      for (let i = 1; i < 16; i++) {
+        if (preset === 'pikopiko') {
+          real[i] = (i % 2 === 1) ? (4 / (Math.PI * i)) * (1 - position * 0.5) : 0;
+        } else if (preset === 'kirakira') {
+          real[i] = Math.sin(i * (1 + position * 3) * Math.PI) / (i * 0.8);
+        } else if (preset === 'kankan') {
+          real[i] = (i === 1 || i === 3 || i === 7 || i === 11) ? Math.cos(i * position) / Math.sqrt(i) : 0;
+        } else if (preset === 'fuwafuwa') {
+          real[i] = Math.exp(-(i - 1) * (1.5 + position * 2));
+        } else if (preset === 'pokopoko') {
+          real[i] = Math.exp(-Math.pow(i - (1 + position * 6), 2) / 3);
+        }
+      }
+      return audioCtx.createPeriodicWave(real, imag);
+    }
+
+    function triggerNote(freq) {
+      if (!isAudioInit || !audioCtx) return;
+      
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const noteGain = audioCtx.createGain();
+
+      filterNode.frequency.setTargetAtTime(currentParams.cutoff, now, 0.02);
+      if (pannerNode.pan) pannerNode.pan.setTargetAtTime(currentParams.pan, now, 0.02);
+
+      osc.frequency.setValueAtTime(freq, now);
+
+      const preset = document.getElementById('preset-select').value;
+      const wave = createWavetable(preset, currentParams.wtPos);
+      osc.setPeriodicWave(wave);
+
+      const env = getEnvelopeParams(preset, currentParams.hardness);
+      noteGain.gain.setValueAtTime(0, now);
+      noteGain.gain.linearRampToValueAtTime(0.8, now + env.attack);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + env.attack + env.decay + env.release);
+
+      osc.connect(noteGain);
+      noteGain.connect(ringModDryGain);
+      noteGain.connect(ringModGainNode);
+
+      osc.start(now);
+      osc.stop(now + env.attack + env.decay + env.release + 0.1);
+    }
+
+    // --- Three.js & 3D Objects ---
+    let scene, camera, renderer, dharmaGroup, pivotGroup, bodyMesh;
+    let mainLight, frontSpot, rimLight, ambientLight;
+    let tiltX = 0, tiltY = 0, tiltZ = 0;
+    let velX = 0, velY = 0, velZ = 0;
+    let dharmaEnergy = 0;
+
+    let cameraAngle = 0;
+    const cameraRadius = 6.8;
+    const cameraHeight = 1.1;
+    const cameraSpeed = 0.0015;
+
+    const orbMeshes = {};
+    const orbColors = { wtPos: 0x00f0ff, cutoff: 0xffcc00, hardness: 0xff007f, pan: 0xff6600 };
+    const orbDefaultPos = {
+      wtPos: new THREE.Vector3(-1.8, 0.2, 0.5),
+      cutoff: new THREE.Vector3(0, 1.8, 0),
+      hardness: new THREE.Vector3(1.8, 0.2, 0.5),
+      pan: new THREE.Vector3(0, -1.2, 1.2)
+    };
+
+    const cubeMeshes = {};
+    const cubeColors = { delay: 0x00f0ff, reverb: 0xa000ff, chorus: 0xff007f, tremolo: 0xffcc00, ringmod: 0xff6600 };
+    const cubeBaseAngles = { delay: 0, reverb: 1.25, chorus: 2.51, tremolo: 3.77, ringmod: 5.02 };
+
+    // 達磨テクスチャ動的生成（通常 / 怒髪天モード対応）
+    function createRealDharmaTexture(isDohatsuten = false) {
+      const texCanvas = document.createElement('canvas');
+      texCanvas.width = 1024;
+      texCanvas.height = 1024;
+      const ctx = texCanvas.getContext('2d');
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, 1024);
+      if (isDohatsuten) {
+        bgGrad.addColorStop(0.0, '#ff1100');
+        bgGrad.addColorStop(0.4, '#aa0000');
+        bgGrad.addColorStop(0.8, '#550000');
+        bgGrad.addColorStop(1.0, '#220000');
+      } else {
+        bgGrad.addColorStop(0.0, '#e6192a');
+        bgGrad.addColorStop(0.4, '#b80b18');
+        bgGrad.addColorStop(0.8, '#78030b');
+        bgGrad.addColorStop(1.0, '#4a0005');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      for (let i = 0; i < 500; i++) {
+        ctx.fillStyle = `rgba(255, 215, 0, ${Math.random() * 0.22})`;
+        ctx.beginPath();
+        ctx.arc(Math.random() * 1024, Math.random() * 1024, Math.random() * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.save();
+      ctx.translate(512, 420);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -180);
+      ctx.bezierCurveTo(165, -180, 215, -60, 205, 60);
+      ctx.bezierCurveTo(195, 175, 115, 215, 0, 215);
+      ctx.bezierCurveTo(-115, 215, -195, 175, -205, 60);
+      ctx.bezierCurveTo(-215, -60, -165, -180, 0, -180);
+      ctx.closePath();
+
+      // 顔の色：怒髪天モードでは赤くなる
+      ctx.fillStyle = isDohatsuten ? '#ff2a2a' : '#fcf6ea';
+      ctx.fill();
+
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = isDohatsuten ? '#ffcc00' : '#d4af37';
+      ctx.stroke();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#fff59d';
+      ctx.stroke();
+
+      const redEyeGradL = ctx.createRadialGradient(-90, -5, 8, -90, -5, 65);
+      redEyeGradL.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+      redEyeGradL.addColorStop(1, 'rgba(220, 20, 20, 0)');
+      ctx.fillStyle = redEyeGradL;
+      ctx.beginPath(); ctx.arc(-90, -5, 65, 0, Math.PI * 2); ctx.fill();
+
+      const redEyeGradR = ctx.createRadialGradient(90, -5, 8, 90, -5, 65);
+      redEyeGradR.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+      redEyeGradR.addColorStop(1, 'rgba(220, 20, 20, 0)');
+      ctx.fillStyle = redEyeGradR;
+      ctx.beginPath(); ctx.arc(90, -5, 65, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(-90, -5, 38, 0, Math.PI * 2); ctx.arc(90, -5, 38, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#111111'; ctx.stroke();
+
+      ctx.fillStyle = isDohatsuten ? '#ff0000' : '#0a0a0a';
+      ctx.beginPath(); ctx.arc(-90, -5, 18, 0, Math.PI * 2); ctx.arc(90, -5, 18, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = '#ffd700'; ctx.stroke();
+
+      // 眉毛
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      if (isDohatsuten) {
+        // 吊り上がった激しい眉毛
+        ctx.moveTo(-25, -35); ctx.quadraticCurveTo(-100, -145, -175, -40); ctx.quadraticCurveTo(-110, -90, -25, -35);
+        ctx.moveTo(25, -35); ctx.quadraticCurveTo(100, -145, 175, -40); ctx.quadraticCurveTo(110, -90, 25, -35);
+      } else {
+        ctx.moveTo(-25, -55); ctx.quadraticCurveTo(-100, -125, -175, -60); ctx.quadraticCurveTo(-110, -80, -25, -55);
+        ctx.moveTo(25, -55); ctx.quadraticCurveTo(100, -125, 175, -60); ctx.quadraticCurveTo(110, -80, 25, -55);
+      }
+      ctx.fill();
+
+      // ひげ
+      ctx.beginPath();
+      ctx.moveTo(-35, 65); ctx.quadraticCurveTo(-140, 75, -185, 150); ctx.quadraticCurveTo(-110, 105, -35, 80);
+      ctx.moveTo(35, 65); ctx.quadraticCurveTo(140, 75, 185, 150); ctx.quadraticCurveTo(110, 105, 35, 80);
+      ctx.fill();
+
+      // 鼻
+      ctx.beginPath();
+      ctx.moveTo(-10, 15); ctx.lineTo(0, 5); ctx.lineTo(10, 15);
+      ctx.lineWidth = 4; ctx.strokeStyle = '#333333'; ctx.stroke();
+
+      // 口の描画（通常は笑顔、怒髪天モードでは「へ」の字）
+      ctx.beginPath();
+      if (isDohatsuten) {
+        // 「へ」の字口
+        ctx.moveTo(-38, 75);
+        ctx.quadraticCurveTo(0, 42, 38, 75);
+      } else {
+        // にっこり口
+        ctx.moveTo(-32, 60);
+        ctx.quadraticCurveTo(0, 75, 32, 60);
+      }
+      ctx.lineWidth = 7; ctx.strokeStyle = '#a00000'; ctx.stroke();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#000000'; ctx.stroke();
+
+      ctx.restore();
+
+      // 文字描画（「法」->「怒」）
+      ctx.save();
+      ctx.translate(512, 785);
+      ctx.font = 'bold 125px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const charText = isDohatsuten ? '怒' : '法';
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillText(charText, 4, 4);
+
+      ctx.fillStyle = isDohatsuten ? '#ff1100' : '#fcd34d';
+      ctx.fillText(charText, 0, 0);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.strokeText(charText, 0, 0);
+
+      ctx.strokeStyle = isDohatsuten ? '#ff0000' : '#e5b830';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(-140, 0, 32, 0, Math.PI * 1.5);
+      ctx.arc(140, 0, 32, Math.PI, Math.PI * 2.5);
+      ctx.stroke();
+
+      ctx.restore();
+
+      return new THREE.CanvasTexture(texCanvas);
+    }
+
+    function init3D() {
+      const container = document.getElementById('canvas-container');
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x0b0b10, 0.035);
+
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+      camera.position.set(0, cameraHeight, cameraRadius);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+      scene.add(ambientLight);
+
+      mainLight = new THREE.DirectionalLight(0xfffaed, 1.2);
+      mainLight.position.set(4, 8, 6);
+      mainLight.castShadow = true;
+      mainLight.shadow.mapSize.width = 2048;
+      mainLight.shadow.mapSize.height = 2048;
+      mainLight.shadow.bias = -0.0001;
+      scene.add(mainLight);
+
+      frontSpot = new THREE.SpotLight(0xfff0dd, 0.7, 15, Math.PI / 4, 0.5);
+      frontSpot.position.set(0, 3, 5);
+      scene.add(frontSpot);
+
+      rimLight = new THREE.PointLight(0x00f0ff, 0.9, 10);
+      rimLight.position.set(-4, 3, -3);
+      scene.add(rimLight);
+
+      // --- 接地点を中心（支点）とするピボットグループの設定 ---
+      pivotGroup = new THREE.Group();
+      pivotGroup.position.set(0, -1.25, 0); // 床・達磨接地点
+      scene.add(pivotGroup);
+
+      dharmaGroup = new THREE.Group();
+      dharmaGroup.position.set(0, 1.25, 0); // ピボット内での達磨本体の相対位置
+      pivotGroup.add(dharmaGroup);
+
+      const points = [];
+      const numPoints = 48;
+      for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints;
+        let y, r;
+
+        if (t < 0.05) {
+          const localT = t / 0.05;
+          y = -1.2;
+          r = localT * 0.82;
+        } else if (t < 0.5) {
+          const localT = (t - 0.05) / 0.45;
+          y = -1.2 + localT * 1.2;
+          r = 0.82 + Math.sin(localT * Math.PI) * 0.42;
+        } else if (t < 0.6) {
+          const localT = (t - 0.5) / 0.1;
+          y = 0.0 + localT * 0.25;
+          r = 0.98 - Math.sin(localT * Math.PI) * 0.1;
+        } else {
+          const localT = (t - 0.6) / 0.4;
+          const angle = localT * (Math.PI / 2);
+          y = 0.25 + Math.sin(angle) * 0.85;
+          r = 0.88 * Math.cos(angle);
+        }
+        points.push(new THREE.Vector2(Math.max(0, r), y));
+      }
+
+      const bodyGeo = new THREE.LatheGeometry(points, 64);
+      const dharmaTexture = createRealDharmaTexture(false);
+
+      const bodyMat = new THREE.MeshPhysicalMaterial({
+        map: dharmaTexture,
+        roughness: 0.22,
+        metalness: 0.1,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.05,
+        reflectivity: 0.9
+      });
+
+      bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+      bodyMesh.castShadow = true;
+      bodyMesh.receiveShadow = true;
+      dharmaGroup.add(bodyMesh);
+
+      const baseGeo = new THREE.CylinderGeometry(0.85, 1.05, 0.35, 64);
+      const baseMat = new THREE.MeshPhysicalMaterial({
+        color: 0x120d0d,
+        roughness: 0.25,
+        metalness: 0.2,
+        clearcoat: 0.8,
+        clearcoatRoughness: 0.1
+      });
+      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+      baseMesh.position.y = -1.25;
+      baseMesh.castShadow = true;
+      baseMesh.receiveShadow = true;
+      dharmaGroup.add(baseMesh);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(24, 24),
+        new THREE.MeshStandardMaterial({ color: 0x06060a, roughness: 0.65, metalness: 0.1 })
+      );
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -1.42;
+      floor.receiveShadow = true;
+      scene.add(floor);
+
+      Object.keys(orbColors).forEach(id => {
+        const geo = new THREE.SphereGeometry(0.12, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: orbColors[id] });
+        const orb = new THREE.Mesh(geo, mat);
+        
+        const haloGeo = new THREE.SphereGeometry(0.22, 16, 16);
+        const haloMat = new THREE.MeshBasicMaterial({ color: orbColors[id], transparent: true, opacity: 0.3 });
+        orb.add(new THREE.Mesh(haloGeo, haloMat));
+
+        orb.position.copy(orbDefaultPos[id]);
+        scene.add(orb);
+        orbMeshes[id] = orb;
+      });
+
+      Object.keys(cubeColors).forEach(id => {
+        const group = new THREE.Group();
+        const geo = new THREE.BoxGeometry(0.28, 0.28, 0.28);
+        const mat = new THREE.MeshStandardMaterial({ color: cubeColors[id], roughness: 0.2, metalness: 0.8 });
+        const boxMesh = new THREE.Mesh(geo, mat);
+        group.add(boxMesh);
+
+        const wireGeo = new THREE.BoxGeometry(0.36, 0.36, 0.36);
+        const wireMat = new THREE.MeshBasicMaterial({ color: cubeColors[id], wireframe: true, transparent: true, opacity: 0.4 });
+        group.add(new THREE.Mesh(wireGeo, wireMat));
+
+        scene.add(group);
+        cubeMeshes[id] = group;
+      });
+
+      let isDragging = false;
+      let prevMouse = { x: 0, y: 0 };
+
+      const onPointerDown = (e) => {
+        isDragging = true;
+        prevMouse = { x: e.clientX, y: e.clientY };
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - prevMouse.x;
+        const dy = e.clientY - prevMouse.y;
+
+        velZ += dx * 0.00025;
+        velX += dy * 0.00025;
+        velY += (dx + dy) * 0.0001;
+
+        prevMouse = { x: e.clientX, y: e.clientY };
+      };
+
+      const onPointerUp = () => { isDragging = false; };
+
+      const el = renderer.domElement;
+      el.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+      el.addEventListener('touchstart', (e) => onPointerDown(e.touches[0]));
+      window.addEventListener('touchmove', (e) => onPointerMove(e.touches[0]));
+      window.addEventListener('touchend', onPointerUp);
+
+      window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+    }
+
+    // --- 怒髪天モード起動 / 解除関数 ---
+    function enterDohatsutenMode() {
+      if (isDohatsutenMode) return;
+      isDohatsutenMode = true;
+      dohatsutenStartTime = Date.now();
+      bitcrusherSend = 100; // センドレベル 100%スタート
+
+      // テクスチャ切替（顔が赤、口が「へ」の字、胸が「怒」）
+      bodyMesh.material.map = createRealDharmaTexture(true);
+      bodyMesh.material.map.needsUpdate = true;
+
+      // UI表示変更
+      const display = document.getElementById('scale-display');
+      display.innerText = '怒髪天モード発動中！';
+      display.classList.add('dohatsuten');
+      document.getElementById('bitcrusher-ui').style.display = 'flex';
+
+      // 照明を赤系に変更
+      mainLight.color.setHex(0xff1111);
+      frontSpot.color.setHex(0xff0000);
+      rimLight.color.setHex(0xff3300);
+      ambientLight.color.setHex(0xff1122);
+    }
+
+    function exitDohatsutenMode() {
+      if (!isDohatsutenMode) return;
+      isDohatsutenMode = false;
+      bitcrusherSend = 0;
+
+      // 通常テクスチャに戻す
+      bodyMesh.material.map = createRealDharmaTexture(false);
+      bodyMesh.material.map.needsUpdate = true;
+
+      // UI表示復元
+      const display = document.getElementById('scale-display');
+      display.innerText = SCALES[currentScaleIdx].name;
+      display.classList.remove('dohatsuten');
+      document.getElementById('bitcrusher-ui').style.display = 'none';
+
+      // 照明を通常色に戻す
+      mainLight.color.setHex(0xfffaed);
+      frontSpot.color.setHex(0xfff0dd);
+      rimLight.color.setHex(0x00f0ff);
+      ambientLight.color.setHex(0xffffff);
+    }
+
+    // --- Physics & Updates ---
+    let lastFrameTime = Date.now();
+
+    function updatePhysics() {
+      const now = Date.now();
+      const dt = (now - lastFrameTime) / 1000; // 秒単位
+      lastFrameTime = now;
+
+      cameraAngle += cameraSpeed;
+      camera.position.x = Math.sin(cameraAngle) * cameraRadius;
+      camera.position.z = Math.cos(cameraAngle) * cameraRadius;
+      camera.position.y = cameraHeight + Math.sin(cameraAngle * 0.5) * 0.2;
+      camera.lookAt(0, 0, 0);
+
+      const k = 0.0022;
+      const damping = 0.986;
+
+      velX += -k * tiltX; velX *= damping; tiltX += velX;
+      velZ += -k * tiltZ; velZ *= damping; tiltZ += velZ;
+      velY *= damping; tiltY += velY;
+
+      // 支点（ピボット）を中心に傾きを適用
+      pivotGroup.rotation.x = tiltX;
+      pivotGroup.rotation.y = tiltY;
+      pivotGroup.rotation.z = tiltZ;
+
+      // --- 達磨の頭頂部が床面よりも下（埋没）になったか判定 ---
+      pivotGroup.updateMatrixWorld(true);
+      const headTopLocal = new THREE.Vector3(0, 2.35, 0); // ピボットから見た頭頂部位置
+      const headTopWorld = headTopLocal.applyMatrix4(pivotGroup.matrixWorld);
+
+      if (headTopWorld.y <= -1.42) {
+        enterDohatsutenMode();
+      }
+
+      // --- 怒髪天モード中のタイマー＆減衰処理 ---
+      if (isDohatsutenMode) {
+        const elapsed = (now - dohatsutenStartTime) / 1000; // 経過秒数
+        
+        // 毎秒3ずつ低下
+        bitcrusherSend = Math.max(0, 100 - elapsed * 3);
+
+        // 30秒経過で通常モードへ復帰
+        if (elapsed >= 30) {
+          exitDohatsutenMode();
+        }
+      }
+
+      dharmaEnergy = Math.sqrt(tiltX * tiltX + tiltZ * tiltZ + velX * velX + velZ * velZ);
+
+      // --- 法の乱れ：レベル昇格判定 ---
+      if (!isDohatsutenMode) {
+        const energyStep = 0.15;
+        let candidateScaleIdx = Math.min(5, Math.floor(dharmaEnergy / energyStep));
+
+        const nowAudioTime = audioCtx ? audioCtx.currentTime : Date.now() / 1000;
+        const minKeepDuration = (120 / bpm);
+
+        if (candidateScaleIdx !== currentScaleIdx) {
+          if (nowAudioTime - lastScaleChangeTime >= minKeepDuration) {
+            currentScaleIdx = candidateScaleIdx;
+            lastScaleChangeTime = nowAudioTime;
+            document.getElementById('scale-display').innerText = SCALES[currentScaleIdx].name;
+          }
+        }
+      }
+
+      update3DParamsAndOrbs();
+      update3DFXCubes();
+    }
+
+    function update3DParamsAndOrbs() {
+      const time = Date.now() * 0.002;
+
+      if (modStates.wtPos) {
+        currentParams.wtPos = Math.max(0, Math.min(1, baseParams.wtPos + (Math.sin(tiltX * 2.5) * 0.2 + velX * 0.75)));
+      } else {
+        currentParams.wtPos = baseParams.wtPos;
+      }
+
+      if (modStates.cutoff) {
+        const yVel = Math.abs(velY) + Math.abs(velX) * 0.5 + Math.abs(velZ) * 0.5;
+        currentParams.cutoff = Math.max(100, Math.min(4000, baseParams.cutoff + yVel * 6000 + Math.abs(tiltX) * 750));
+      } else {
+        currentParams.cutoff = baseParams.cutoff;
+      }
+
+      if (modStates.hardness) {
+        currentParams.hardness = Math.max(0, Math.min(1, baseParams.hardness + Math.sin(tiltZ * 2.5) * 0.2));
+      } else {
+        currentParams.hardness = baseParams.hardness;
+      }
+
+      if (modStates.pan) {
+        currentParams.pan = Math.max(-1, Math.min(1, baseParams.pan + tiltZ * 0.75));
+      } else {
+        currentParams.pan = baseParams.pan;
+      }
+
+      Object.keys(orbMeshes).forEach(id => {
+        const orb = orbMeshes[id];
+        const isON = modStates[id];
+        let target = new THREE.Vector3();
+
+        if (!isON) {
+          target.copy(orbDefaultPos[id]);
+          target.y += Math.sin(time + id.length) * 0.05;
+        } else {
+          switch(id) {
+            case 'wtPos':
+              target.set(-1.8 + currentParams.wtPos * 0.8, 0.2 + tiltX, 0.5 + Math.cos(tiltX));
+              break;
+            case 'cutoff':
+              const r = 1.2 + (currentParams.cutoff / 4000) * 0.8;
+              target.set(Math.cos(time * 0.5) * r, 1.6 + Math.sin(time) * 0.2, Math.sin(time * 0.5) * r);
+              break;
+            case 'hardness':
+              target.set(1.8 - currentParams.hardness * 0.8, 0.2 + tiltZ, 0.5 + Math.sin(tiltZ));
+              break;
+            case 'pan':
+              target.set(currentParams.pan * 2.2, -1.1, 1.2);
+              break;
+          }
+        }
+        orb.position.lerp(target, 0.1);
+      });
+
+      updateUI();
+    }
+
+    function update3DFXCubes() {
+      const time = Date.now() * 0.0015;
+
+      Object.keys(cubeMeshes).forEach(id => {
+        const cube = cubeMeshes[id];
+        const isMod = fxModStates[id];
+        const baseVal = baseFX[id];
+
+        let effVal = baseVal;
+        if (isMod) {
+          const modAdd = dharmaEnergy * 90;
+          effVal = Math.min(100, Math.max(0, baseVal + modAdd));
+        }
+        effectiveFX[id] = effVal;
+
+        const orbitRadius = 2.8 + (effVal / 100) * 0.8;
+        const angle = cubeBaseAngles[id] + time * (0.3 + (effVal / 100) * 0.5);
+        const targetX = Math.cos(angle) * orbitRadius;
+        const targetZ = Math.sin(angle) * orbitRadius;
+        const targetY = 0.5 + Math.sin(time * 2 + cubeBaseAngles[id]) * 0.4 + (effVal / 100) * 0.3;
+
+        cube.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.08);
+
+        const scaleFactor = 0.8 + (effVal / 100) * 0.7;
+        cube.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        cube.rotation.x += 0.01 + (effVal / 100) * 0.03;
+        cube.rotation.y += 0.02 + (effVal / 100) * 0.04;
+      });
+
+      updateFXAudioNodes();
+    }
+
+    function updateUI() {
+      document.getElementById('val-wtPos').innerText = currentParams.wtPos.toFixed(2);
+      document.getElementById('val-cutoff').innerText = `${Math.round(currentParams.cutoff)} Hz`;
+      document.getElementById('val-hardness').innerText = currentParams.hardness.toFixed(2);
+      document.getElementById('val-pan').innerText = currentParams.pan.toFixed(2);
+
+      Object.keys(effectiveFX).forEach(id => {
+        document.getElementById(`val-fx-${id}`).innerText = `${Math.round(effectiveFX[id])}%`;
+      });
+
+      if (isDohatsutenMode) {
+        document.getElementById('val-fx-bitcrusher').innerText = `${Math.round(bitcrusherSend)}%`;
+      }
+    }
+
+    // --- Sequencer ---
+    let isPlaying = false, currentStep = 0, bpm = 120, seqTimer = null;
+    
+    // デフォルトで16ステップ全てON
+    const stepsData = Array(16).fill().map(() => ({ active: true }));
+
+    function initSequencerUI() {
+      const grid = document.getElementById('seq-grid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 16; i++) {
+        const stepEl = document.createElement('div');
+        stepEl.className = `seq-step ${stepsData[i].active ? 'active' : ''}`;
+        stepEl.innerHTML = `<div class="seq-led"></div><span style="font-size:0.65rem; color:#555;">${i+1}</span>`;
+        
+        stepEl.addEventListener('click', () => {
+          stepsData[i].active = !stepsData[i].active;
+          stepEl.classList.toggle('active', stepsData[i].active);
+        });
+
+        grid.appendChild(stepEl);
+      }
+    }
+
+    function stepLoop() {
+      if (!isPlaying) return;
+
+      const steps = document.querySelectorAll('.seq-step');
+      steps.forEach((el, idx) => el.classList.toggle('current', idx === currentStep));
+
+      if (stepsData[currentStep].active) {
+        const scale = SCALES[currentScaleIdx].freqs;
+        const freq = scale[currentStep % scale.length];
+        triggerNote(freq);
+      }
+
+      currentStep = (currentStep + 1) % 16;
+      seqTimer = setTimeout(stepLoop, (60 / bpm / 4) * 1000);
+    }
+
+    // --- Visualizer ---
+    function initVisualizer() {
+      const canvas = document.getElementById('visualizer');
+      const ctx = canvas.getContext('2d');
+
+      function draw() {
+        requestAnimationFrame(draw);
+        if (!analyserNode) return;
+
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserNode.getByteTimeDomainData(dataArray);
+
+        ctx.fillStyle = '#06060a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = isDohatsutenMode ? '#ff0000' : '#00f0ff';
+        ctx.beginPath();
+
+        const sliceWidth = canvas.width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = v * (canvas.height / 2);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          x += sliceWidth;
+        }
+
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+      }
+      draw();
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('overlay').addEventListener('click', () => {
+      initAudio();
+      document.getElementById('overlay').style.display = 'none';
+    });
+
+    document.querySelectorAll('.fx-slider').forEach(slider => {
+      slider.addEventListener('input', (e) => {
+        const id = e.target.id.replace('fx-', '');
+        baseFX[id] = parseFloat(e.target.value);
+      });
+    });
+
+    document.querySelectorAll('[data-fx]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.dataset.fx;
+        fxModStates[id] = !fxModStates[id];
+        e.target.classList.toggle('active', fxModStates[id]);
+        e.target.innerText = fxModStates[id] ? '連動 ON' : '連動 OFF';
+      });
+    });
+
+    document.getElementById('slider-wtPos').addEventListener('input', (e) => { baseParams.wtPos = parseFloat(e.target.value) / 100; });
+    document.getElementById('slider-cutoff').addEventListener('input', (e) => { baseParams.cutoff = parseFloat(e.target.value); });
+    document.getElementById('slider-hardness').addEventListener('input', (e) => { baseParams.hardness = parseFloat(e.target.value) / 100; });
+    document.getElementById('slider-pan').addEventListener('input', (e) => { baseParams.pan = parseFloat(e.target.value) / 100; });
+
+    document.querySelectorAll('[data-param]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const param = e.target.dataset.param;
+        modStates[param] = !modStates[param];
+        e.target.classList.toggle('active', modStates[param]);
+        e.target.innerText = modStates[param] ? '連動 ON' : '連動 OFF';
+        document.getElementById(`card-${param}`).classList.toggle('active', modStates[param]);
+      });
+    });
+
+    document.getElementById('seq-play-btn').addEventListener('click', (e) => {
+      isPlaying = !isPlaying;
+      e.target.classList.toggle('active', isPlaying);
+      if (isPlaying) {
+        currentStep = 0;
+        stepLoop();
+      } else {
+        clearTimeout(seqTimer);
+        document.querySelectorAll('.seq-step').forEach(el => el.classList.remove('current'));
+      }
+    });
+
+    document.getElementById('bpm-slider').addEventListener('input', (e) => {
+      bpm = parseInt(e.target.value);
+      document.getElementById('bpm-val').innerText = bpm;
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      updatePhysics();
+      renderer.render(scene, camera);
+    }
+
+    window.onload = () => {
+      init3D();
+      initSequencerUI();
+      initVisualizer();
+      animate();
+    };
+  </script>
+</body>
+</html>
