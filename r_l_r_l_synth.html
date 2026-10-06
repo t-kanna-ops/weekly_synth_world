@@ -117,7 +117,7 @@
             </div>
 
             <div class="text-xs sm:text-sm font-pixel text-amber-400 pl-2 border-l border-slate-700">
-                BAR <span id="hud-bar-count" class="text-white">01</span> / <span id="hud-bar-max">32</span>
+                BAR <span id="hud-bar-count" class="text-white">01</span> / <span id="hud-bar-max">96</span>
             </div>
         </div>
 
@@ -125,7 +125,7 @@
         <div class="flex items-center gap-2">
             <div class="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 text-xs">
                 <i class="fa-solid fa-gauge-high text-cyan-400"></i>
-                <span id="hud-bpm-val" class="font-mono font-bold text-cyan-300 w-8 text-center">120</span>
+                <span id="hud-bpm-val" class="font-mono font-bold text-cyan-300 w-8 text-center">128</span>
                 <span class="text-[10px] text-slate-500">BPM</span>
             </div>
 
@@ -278,17 +278,17 @@
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold">
                         <span class="text-slate-300">テンポ (BPM)</span>
-                        <span id="start-bpm-disp" class="text-cyan-400 font-mono">120 BPM</span>
+                        <span id="start-bpm-disp" class="text-cyan-400 font-mono">128 BPM</span>
                     </div>
-                    <input id="start-bpm-input" type="range" min="60" max="200" value="120" step="1" oninput="updateStartBpm(this.value)" class="w-full accent-cyan-400 cursor-pointer">
+                    <input id="start-bpm-input" type="range" min="60" max="200" value="128" step="1" oninput="updateStartBpm(this.value)" class="w-full accent-cyan-400 cursor-pointer">
                 </div>
 
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold">
                         <span class="text-slate-300">ダンジョン長さ (小節数)</span>
-                        <span id="start-bars-disp" class="text-amber-400 font-mono">32 小節</span>
+                        <span id="start-bars-disp" class="text-amber-400 font-mono">96 小節</span>
                     </div>
-                    <input id="start-bars-input" type="range" min="10" max="201" value="32" step="1" oninput="updateStartBars(this.value)" class="w-full accent-amber-400 cursor-pointer">
+                    <input id="start-bars-input" type="range" min="10" max="201" value="96" step="1" oninput="updateStartBars(this.value)" class="w-full accent-amber-400 cursor-pointer">
                     <div class="text-[10px] text-slate-500 text-right">*201を超えると「無限(エンドレス)」になります</div>
                 </div>
             </div>
@@ -920,9 +920,9 @@
         }
 
         const gameState = {
-            bpm: 120,
+            bpm: 128,
             currentBar: 1,
-            targetBars: 32,
+            targetBars: 96,
             nextOfferBar: 1,
             currentStep: 0,
             isPlaying: false,
@@ -936,8 +936,8 @@
                 PHRASE: [null, null, null, null, null]
             },
             replayLog: {
-                bpm: 120,
-                targetBars: 32,
+                bpm: 128,
+                targetBars: 96,
                 mode: 'advance',
                 events: []
             }
@@ -1810,8 +1810,8 @@
                     const data = JSON.parse(e.target.result);
                     if (data && data.events) {
                         gameState.replayLog = data;
-                        gameState.bpm = data.bpm || 120;
-                        gameState.targetBars = data.targetBars || 32;
+                        gameState.bpm = data.bpm || 128;
+                        gameState.targetBars = data.targetBars || 96;
                         gameState.mode = data.mode || 'advance';
                         gameState.isReplayMode = true;
 
