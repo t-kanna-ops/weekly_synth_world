@@ -78,7 +78,7 @@
             transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .card-interactive:hover {
-            transform: translateY(-3px) scale(1.02);
+            transform: translateY(-2px) scale(1.02);
         }
 
         canvas {
@@ -90,14 +90,14 @@
 <body class="synth-grid min-h-screen flex flex-col justify-between text-slate-100">
 
     <!-- TOP HUD / HEADER -->
-    <header class="bg-slate-900/90 border-b border-cyan-500/30 backdrop-blur px-4 py-2 flex flex-wrap justify-between items-center z-20 gap-2 shadow-lg">
+    <header class="bg-slate-900/90 border-b border-cyan-500/30 backdrop-blur px-3 py-1.5 flex flex-wrap justify-between items-center z-20 gap-2 shadow-lg">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-xl shadow-md glow-cyan">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-fuchsia-600 flex items-center justify-center text-white font-black text-lg shadow-md glow-cyan">
                 ♪
             </div>
             <div>
-                <h1 class="font-black text-sm sm:text-base text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 tracking-wider flex items-center gap-2">
-                    ROGUE -LIKE ~RPG-LIKE-SYNTH
+                <h1 class="font-black text-xs sm:text-base text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300 tracking-wider flex items-center gap-2">
+                    ROGUE-LIKE ~RPG-LIKE-SYNTH
                     <span id="replay-indicator" class="hidden px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[10px] animate-pulse">REPLAY</span>
                 </h1>
                 <p class="text-[10px] text-slate-400 flex items-center gap-1">
@@ -108,12 +108,12 @@
         </div>
 
         <!-- Beat & Bar Indicators -->
-        <div class="flex items-center gap-3 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+        <div class="flex items-center gap-3 bg-slate-950/80 px-2.5 py-1 rounded-xl border border-slate-800">
             <div class="flex items-center space-x-1.5">
-                <div id="beat-led-0" class="w-3 h-3 rounded-full bg-slate-700 transition-all duration-100"></div>
-                <div id="beat-led-1" class="w-3 h-3 rounded-full bg-slate-700 transition-all duration-100"></div>
-                <div id="beat-led-2" class="w-3 h-3 rounded-full bg-slate-700 transition-all duration-100"></div>
-                <div id="beat-led-3" class="w-3 h-3 rounded-full bg-slate-700 transition-all duration-100"></div>
+                <div id="beat-led-0" class="w-2.5 h-2.5 rounded-full bg-slate-700 transition-all duration-100"></div>
+                <div id="beat-led-1" class="w-2.5 h-2.5 rounded-full bg-slate-700 transition-all duration-100"></div>
+                <div id="beat-led-2" class="w-2.5 h-2.5 rounded-full bg-slate-700 transition-all duration-100"></div>
+                <div id="beat-led-3" class="w-2.5 h-2.5 rounded-full bg-slate-700 transition-all duration-100"></div>
             </div>
 
             <div class="text-xs sm:text-sm font-pixel text-amber-400 pl-2 border-l border-slate-700">
@@ -134,51 +134,51 @@
                 <input id="master-volume" type="range" min="0" max="1" step="0.05" value="0.75" class="w-16 accent-cyan-400 cursor-pointer">
             </div>
 
-            <button id="btn-toggle-play" class="w-9 h-9 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center justify-center transition shadow-md">
+            <button id="btn-toggle-play" class="w-8 h-8 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center justify-center transition shadow-md">
                 <i class="fa-solid fa-pause"></i>
             </button>
 
-            <button id="btn-reset-game" title="タイトルに戻る" class="w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
+            <button id="btn-reset-game" title="タイトルに戻る" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition">
                 <i class="fa-solid fa-rotate-left"></i>
             </button>
         </div>
     </header>
 
     <!-- MAIN CONTENT AREA -->
-    <main class="flex-1 flex flex-col lg:flex-row p-2 sm:p-4 gap-3 max-w-7xl mx-auto w-full relative">
+    <main class="flex-1 flex flex-col lg:flex-row p-2 gap-2 max-w-7xl mx-auto w-full relative">
 
         <!-- LEFT/TOP: Canvas Sugoroku View -->
         <section class="flex-1 flex flex-col bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl relative">
-            <div class="absolute top-3 left-3 z-10 bg-slate-950/80 backdrop-blur px-3 py-1 rounded-full text-xs text-slate-300 border border-slate-800 flex items-center gap-2">
+            <div class="absolute top-2 left-2 z-10 bg-slate-950/80 backdrop-blur px-2.5 py-0.5 rounded-full text-[11px] text-slate-300 border border-slate-800 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>ダンジョンマップ</span>
             </div>
 
             <!-- Active Bonuses Badges Container -->
-            <div id="bonuses-badge-container" class="absolute top-3 right-3 z-10 flex flex-col items-end gap-1.5 pointer-events-none"></div>
+            <div id="bonuses-badge-container" class="absolute top-2 right-2 z-10 flex flex-col items-end gap-1 pointer-events-none"></div>
 
-            <div id="canvas-container" class="w-full flex-1 min-h-[260px] sm:min-h-[340px] relative bg-slate-950">
+            <div id="canvas-container" class="w-full flex-1 min-h-[220px] sm:min-h-[300px] relative bg-slate-950">
                 <canvas id="game-canvas" class="w-full h-full"></canvas>
             </div>
 
             <!-- Active Chord Banner -->
-            <div class="bg-slate-950/90 border-t border-slate-800 p-2.5 flex items-center justify-between text-xs sm:text-sm px-4">
+            <div class="bg-slate-950/90 border-t border-slate-800 p-2 flex items-center justify-between text-xs px-3">
                 <div class="flex items-center gap-2">
                     <span class="text-amber-400 font-bold"><i class="fa-solid fa-music"></i> 演奏中コード:</span>
-                    <span id="active-chord-name" class="font-pixel text-amber-300 text-sm sm:text-base">Cmaj7</span>
+                    <span id="active-chord-name" class="font-pixel text-amber-300 text-xs sm:text-sm">Cmaj7</span>
                 </div>
-                <div id="active-layer-count" class="text-slate-400 text-xs">
+                <div id="active-layer-count" class="text-slate-400 text-[11px]">
                     アクティブ(枠1-4): <span class="text-cyan-400 font-bold">1</span> / 4
                 </div>
             </div>
         </section>
 
-        <!-- RIGHT/BOTTOM: Deck & Layer Inspector HUD (5-Column Structured Deck) -->
-        <section class="w-full lg:w-[500px] flex flex-col gap-2.5">
-            <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-3 sm:p-4 flex flex-col gap-3 shadow-2xl backdrop-blur">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <!-- RIGHT/BOTTOM: Deck & Layer Inspector HUD (Compact Height Cards) -->
+        <section class="w-full lg:w-[480px] flex flex-col gap-2">
+            <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-2.5 sm:p-3 flex flex-col gap-2 shadow-2xl backdrop-blur">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
                     <div>
-                        <h2 class="text-xs font-bold text-slate-200 tracking-wider flex items-center gap-2">
+                        <h2 class="text-xs font-bold text-slate-200 tracking-wider flex items-center gap-1.5">
                             <i class="fa-solid fa-layer-group text-fuchsia-400"></i> デッキ組み合わせ (枠1~4: 演奏中 / 右端: ストック)
                         </h2>
                         <p class="text-[10px] text-cyan-400">💡 カードをクリック選択し、別スロットと自由に入れ替え可能！</p>
@@ -186,7 +186,7 @@
                 </div>
 
                 <!-- Column Headers (枠1 | 枠2 | 枠3 | 枠4 | ストック) -->
-                <div class="grid grid-cols-5 gap-1.5 text-center text-[11px] font-bold pb-1 border-b border-slate-800">
+                <div class="grid grid-cols-5 gap-1 text-center text-[10px] font-bold pb-1 border-b border-slate-800">
                     <div class="text-cyan-400 border-r border-slate-800/80 pr-1">枠 1</div>
                     <div class="text-cyan-400 border-r border-slate-800/80 pr-1">枠 2</div>
                     <div class="text-cyan-400 border-r border-slate-800/80 pr-1">枠 3</div>
@@ -195,39 +195,39 @@
                 </div>
 
                 <!-- CHORD ROW -->
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-0.5">
                     <div class="text-[10px] text-amber-400 font-bold flex items-center justify-between">
                         <span><i class="fa-solid fa-guitar mr-1"></i> CHORD (コード進行)</span>
                         <span id="count-chord" class="text-slate-500">1/5</span>
                     </div>
-                    <div id="deck-chord" class="grid grid-cols-5 gap-1.5 min-h-[52px]"></div>
+                    <div id="deck-chord" class="grid grid-cols-5 gap-1 min-h-[36px]"></div>
                 </div>
 
                 <!-- BEAT ROW -->
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-0.5">
                     <div class="text-[10px] text-cyan-400 font-bold flex items-center justify-between">
                         <span><i class="fa-solid fa-drum mr-1"></i> BEAT (リズムパターン)</span>
                         <span id="count-beat" class="text-slate-500">1/5</span>
                     </div>
-                    <div id="deck-beat" class="grid grid-cols-5 gap-1.5 min-h-[52px]"></div>
+                    <div id="deck-beat" class="grid grid-cols-5 gap-1 min-h-[36px]"></div>
                 </div>
 
                 <!-- TONE ROW -->
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-0.5">
                     <div class="text-[10px] text-fuchsia-400 font-bold flex items-center justify-between">
                         <span><i class="fa-solid fa-sliders mr-1"></i> TONE (音色)</span>
                         <span id="count-tone" class="text-slate-500">1/5</span>
                     </div>
-                    <div id="deck-tone" class="grid grid-cols-5 gap-1.5 min-h-[52px]"></div>
+                    <div id="deck-tone" class="grid grid-cols-5 gap-1 min-h-[36px]"></div>
                 </div>
 
-                <!-- PHRASE ROW (With semi-transparent indicator when Tone is Rhythm) -->
-                <div class="flex flex-col gap-1">
+                <!-- PHRASE ROW -->
+                <div class="flex flex-col gap-0.5">
                     <div class="text-[10px] text-emerald-400 font-bold flex items-center justify-between">
                         <span><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> PHRASE (アルペジオ)</span>
                         <span id="count-phrase" class="text-slate-500">0/5</span>
                     </div>
-                    <div id="deck-phrase" class="grid grid-cols-5 gap-1.5 min-h-[52px]"></div>
+                    <div id="deck-phrase" class="grid grid-cols-5 gap-1 min-h-[36px]"></div>
                 </div>
             </div>
         </section>
@@ -235,12 +235,12 @@
 
     <!-- START / MODE SELECT MODAL OVERLAY -->
     <div id="modal-start" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl flex flex-col gap-6 text-center relative overflow-hidden">
+        <div class="bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl flex flex-col gap-5 text-center relative overflow-hidden">
             <div class="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
             <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-fuchsia-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-            <div class="space-y-2">
-                <div class="inline-flex p-3 rounded-2xl bg-slate-800 border border-slate-700 text-cyan-400 text-3xl mb-1 glow-cyan">
+            <div class="space-y-1.5">
+                <div class="inline-flex p-2.5 rounded-2xl bg-slate-800 border border-slate-700 text-cyan-400 text-2xl mb-1 glow-cyan">
                     ♪
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-amber-300">
@@ -252,10 +252,10 @@
             </div>
 
             <!-- MODE SELECT -->
-            <div class="flex flex-col gap-2 text-left">
+            <div class="flex flex-col gap-1.5 text-left">
                 <label class="text-xs font-bold text-slate-300">■ モード選択 (カード出現ロジック)</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <button type="button" id="mode-opt-random" onclick="selectMode('random')" class="p-3 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-1">
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button type="button" id="mode-opt-random" onclick="selectMode('random')" class="p-2.5 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-0.5">
                         <div class="flex items-center justify-between text-slate-300 font-bold text-xs">
                             <span>ランダム</span>
                             <i class="fa-solid fa-dice text-slate-400"></i>
@@ -263,7 +263,7 @@
                         <span class="text-[10px] text-slate-400 leading-tight">完全ランダムに3枚提示</span>
                     </button>
 
-                    <button type="button" id="mode-opt-advance" onclick="selectMode('advance')" class="p-3 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-1 shadow-lg glow-cyan">
+                    <button type="button" id="mode-opt-advance" onclick="selectMode('advance')" class="p-2.5 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-0.5 shadow-lg glow-cyan">
                         <div class="flex items-center justify-between text-cyan-300 font-bold text-xs">
                             <span>アドバンス</span>
                             <i class="fa-solid fa-brain text-cyan-400"></i>
@@ -274,7 +274,7 @@
             </div>
 
             <!-- SLIDERS -->
-            <div class="space-y-4 text-left bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+            <div class="space-y-3 text-left bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800">
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold">
                         <span class="text-slate-300">テンポ (BPM)</span>
@@ -295,11 +295,11 @@
 
             <!-- Action Buttons -->
             <div class="flex flex-col gap-2">
-                <button id="btn-start-game" class="w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-amber-400 hover:from-cyan-400 hover:to-amber-300 text-slate-950 font-black text-lg tracking-wider shadow-xl transition transform active:scale-95 glow-cyan">
+                <button id="btn-start-game" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-amber-400 hover:from-cyan-400 hover:to-amber-300 text-slate-950 font-black text-base tracking-wider shadow-xl transition transform active:scale-95 glow-cyan">
                     <i class="fa-solid fa-play mr-2"></i> GAME START !
                 </button>
 
-                <label class="w-full py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-bold text-xs tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2">
+                <label class="w-full py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-bold text-xs tracking-wider shadow-md transition cursor-pointer flex items-center justify-center gap-2">
                     <i class="fa-solid fa-file-arrow-up"></i> リプレイデータを読み込んで再生 (.json)
                     <input type="file" id="replay-file-input" accept=".json" class="hidden" onchange="handleReplayFileUpload(event)">
                 </label>
@@ -308,37 +308,37 @@
     </div>
 
     <!-- CARD SELECTION OVERLAY -->
-    <div id="modal-card-select" class="fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="max-w-3xl w-full flex flex-col gap-4 text-center">
-            <div class="space-y-1">
-                <div class="inline-block px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-widest">
+    <div id="modal-card-select" class="fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-3">
+        <div class="max-w-3xl w-full flex flex-col gap-3 text-center">
+            <div class="space-y-0.5">
+                <div class="inline-block px-3 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold uppercase tracking-widest">
                     <i class="fa-solid fa-box-open mr-1"></i> チェックポイント到達！ カード獲得
                 </div>
-                <h2 class="text-xl sm:text-2xl font-black text-white">好きなカードを1枚えらぼう</h2>
-                <p class="text-xs text-slate-400">選んだカードはデッキに追加されます（手動で入れ替え可能です）</p>
+                <h2 class="text-lg sm:text-xl font-black text-white">好きなカードを1枚えらぼう</h2>
+                <p class="text-[11px] text-slate-400">選んだカードはデッキに追加されます（手動で入れ替え可能です）</p>
             </div>
 
-            <div id="card-offers-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 my-2"></div>
+            <div id="card-offers-container" class="grid grid-cols-1 md:grid-cols-3 gap-3 my-1"></div>
         </div>
     </div>
 
     <!-- GAME CLEAR / FINISH MODAL -->
     <div id="modal-finish" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-7 max-w-lg w-full shadow-2xl flex flex-col gap-4 text-center relative max-h-[92vh] overflow-y-auto">
+        <div class="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl flex flex-col gap-3.5 text-center relative max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-center gap-2 text-amber-400">
-                <span class="text-3xl animate-bounce">🏆</span>
+                <span class="text-2xl animate-bounce">🏆</span>
                 <h2 class="text-xl sm:text-2xl font-black text-amber-300">ダンジョン走破完了！</h2>
             </div>
             <p class="text-xs text-slate-300">あなたが創り上げた究極のアンサンブルが完成しました！</p>
 
             <!-- MUSIC STYLE MATRIX CHART -->
-            <div class="bg-slate-950/90 p-3.5 rounded-2xl border border-slate-800 flex flex-col gap-2 text-left">
+            <div class="bg-slate-950/90 p-3 rounded-2xl border border-slate-800 flex flex-col gap-2 text-left">
                 <div class="flex justify-between items-center text-xs font-bold text-slate-300 border-b border-slate-800 pb-1">
                     <span><i class="fa-solid fa-chart-pie text-cyan-400 mr-1"></i> 楽曲傾向マトリクス (枠1-4解析)</span>
                     <span id="matrix-style-tag" class="px-2 py-0.5 rounded bg-fuchsia-950 text-fuchsia-300 border border-fuchsia-700/50 text-[10px]">解析中</span>
                 </div>
 
-                <div class="relative w-full h-44 bg-slate-900/90 rounded-xl border border-slate-800 p-2 flex items-center justify-center overflow-hidden">
+                <div class="relative w-full h-40 bg-slate-900/90 rounded-xl border border-slate-800 p-2 flex items-center justify-center overflow-hidden">
                     <!-- Quadrant Background Labels -->
                     <div class="absolute top-2 left-2 text-[9px] font-bold text-cyan-400/50 pointer-events-none">アゲ × ユル (エモーショナル)</div>
                     <div class="absolute top-2 right-2 text-[9px] font-bold text-amber-400/50 pointer-events-none">アゲ × ノリ (ハイテンション)</div>
@@ -366,20 +366,20 @@
                 </p>
             </div>
 
-            <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800 text-left text-xs space-y-1">
+            <div class="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 text-left text-xs space-y-1">
                 <div class="text-slate-400 border-b border-slate-800 pb-1 font-bold">■ 完成楽曲ステータス</div>
                 <div id="finish-stats" class="text-slate-200 font-mono space-y-0.5 text-[11px]"></div>
             </div>
 
             <div class="flex flex-col gap-2">
-                <button id="btn-download-replay" onclick="downloadReplayData()" class="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg glow-cyan">
+                <button id="btn-download-replay" onclick="downloadReplayData()" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg glow-cyan">
                     <i class="fa-solid fa-download"></i> リプレイデータをダウンロード (.json)
                 </button>
                 <div class="flex gap-2">
-                    <button onclick="closeFinishModalAndKeepPlaying()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                    <button onclick="closeFinishModalAndKeepPlaying()" class="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
                         そのまま演奏を続ける
                     </button>
-                    <button onclick="resetToTitle()" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black">
+                    <button onclick="resetToTitle()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black">
                         もう一度遊ぶ
                     </button>
                 </div>
@@ -541,8 +541,6 @@
             return baseFreq * Math.pow(2, offsetSemi / 12);
         }
 
-        
-        // 1. Distortion Guitar Cutting Synth
         function triggerDistortionGuitarCutting(notes, time) {
             if (!audioCtx || !notes) return;
             const waveshaper = audioCtx.createWaveShaper();
@@ -572,7 +570,6 @@
             gain.connect(masterCompressor);
         }
 
-        // 2. Key Harmonica Synth (Melodica)
         function triggerKeyHarmonicaNote(noteName, time, durationSec = 0.3) {
             if (!audioCtx) return;
             const freq = getNoteFrequency(noteName);
@@ -586,7 +583,6 @@
             osc.type = 'square';
             osc.frequency.setValueAtTime(freq, time);
 
-            // Vibrato LFO
             lfo.frequency.value = 5.5;
             lfoGain.gain.value = 4.0;
             lfo.connect(osc.frequency);
@@ -609,7 +605,6 @@
             osc.stop(time + durationSec + 0.05);
         }
 
-        // 3. Pluck Synth for Canon Melody
         function triggerPluckSynthNote(freq, time) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -635,7 +630,6 @@
             osc.stop(time + 0.25);
         }
 
-        // 4. Electric Piano Glissando/Arpeggio Sweep
         function triggerEPianoGlissando(notes, time) {
             if (!audioCtx || !notes) return;
             notes.forEach((note, idx) => {
@@ -650,7 +644,6 @@
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, noteTime);
 
-                // Tine Bell FM Modulation
                 mod.type = 'sine';
                 mod.frequency.value = freq * 4.0;
                 modGain.gain.value = 180;
@@ -670,7 +663,6 @@
             });
         }
 
-        // 5. Synth Brass Stabs
         function triggerSynthBrassStab(notes, time) {
             if (!audioCtx || !notes) return;
             notes.forEach(note => {
@@ -683,7 +675,7 @@
                 osc1.type = 'sawtooth';
                 osc2.type = 'sawtooth';
                 osc1.frequency.setValueAtTime(freq, time);
-                osc2.frequency.setValueAtTime(freq * 1.005, time); // detuned
+                osc2.frequency.setValueAtTime(freq * 1.005, time);
 
                 filter.type = 'lowpass';
                 filter.frequency.setValueAtTime(3800, time);
@@ -719,7 +711,7 @@
             filter.frequency.value = 3500;
 
             const gain = audioCtx.createGain();
-            gain.gain.setValueAtTime(0.14, time); // Slightly soft crash
+            gain.gain.setValueAtTime(0.14, time);
             gain.gain.exponentialRampToValueAtTime(0.001, time + 0.75);
 
             noise.connect(filter);
@@ -1016,7 +1008,6 @@
             updateDeckUI();
         }
 
-        // Detailed Chord Progression Bonus Evaluator with Cyclic Wrap-around
         function checkActiveProgressionBonuses() {
             const activeChords = gameState.decks.CHORD.slice(0, 4);
             const families = activeChords.map(c => c ? c.family : null);
@@ -1030,45 +1021,35 @@
 
             const bonusActiveIndices = [false, false, false, false];
 
-            // Helper to get family with cyclic index
             const getFam = (idx) => families[(idx + 4) % 4];
 
-            // Check 4-chord sequence matching with rotations (0->1->2->3, 1->2->3->0, etc.)
             for (let offset = 0; offset < 4; offset++) {
                 const f0 = getFam(offset);
                 const f1 = getFam(offset + 1);
                 const f2 = getFam(offset + 2);
                 const f3 = getFam(offset + 3);
 
-                // 1. Royal Road (ロイヤルロードボーナス: F -> G -> Em -> Am)
                 if (f0 === 'F' && f1 === 'G' && f2 === 'Em' && f3 === 'Am') {
                     isRoyalRoad = true;
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
                 }
 
-                // 2. Marusa (マルサボーナス: F -> E7 -> Am -> C)
-                if (f0 === 'F' && f1 === 'E7' && f2 === 'Am' && f0 === 'F' /* C check */) {
-                    // check exact sequence
-                }
                 if (f0 === 'F' && f1 === 'E7' && f2 === 'Am' && f3 === 'C') {
                     isMarusa = true;
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
                 }
 
-                // 3. Canon (カノンボーナス: C -> G -> Am -> Em)
                 if (f0 === 'C' && f1 === 'G' && f2 === 'Am' && f3 === 'Em') {
                     isCanon = true;
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
                 }
 
-                // 4. Komuro / TK (TKボーナス: Am -> F -> G -> C)
                 if (f0 === 'Am' && f1 === 'F' && f2 === 'G' && f3 === 'C') {
                     isKomuro = true;
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
                 }
             }
 
-            // 5. NikoIchi / 2-5-1 (ニコイチ(251)ボーナス: Dm -> G -> C) - Cyclic
             for (let offset = 0; offset < 4; offset++) {
                 const f0 = getFam(offset);
                 const f1 = getFam(offset + 1);
@@ -1082,7 +1063,6 @@
                 }
             }
 
-            // 6. Strong Bonus (Dominant Resolution) - Cyclic (0->1, 1->2, 2->3, 3->0)
             for (let i = 0; i < 4; i++) {
                 const fCurr = families[i];
                 const fNext = families[(i + 1) % 4];
@@ -1140,7 +1120,6 @@
 
             gameState.currentStep = (gameState.currentStep + 1) % 16;
             
-            // 16ステップ（4拍 = 1小節）進んだタイミングで1小節カウントアップ＆1マス前進
             if (gameState.currentStep === 0) {
                 gameState.currentBar++;
                 
@@ -1148,7 +1127,6 @@
                     triggerGameFinish();
                 }
 
-                // 4小節ごとにカード選択を発生
                 if (gameState.currentBar >= gameState.nextOfferBar && !gameState.isFinished) {
                     gameState.nextOfferBar = gameState.currentBar + 4;
                     if (!gameState.isReplayMode) {
@@ -1162,14 +1140,12 @@
             const activeChord = getActiveChordForBar(gameState.currentBar);
             const bonuses = checkActiveProgressionBonuses();
 
-            // Play a soft crash cymbal on Step 0 of Bar 1, 5, 9, 13... (Card Offer bars)
             if (stepIndex === 0 && (gameState.currentBar - 1) % 4 === 0) {
                 triggerCrashCymbal(time);
             }
 
-            // 最初の1小節目 (Bar 1, Step 0) で初回カード選択オファーを出す
             if (gameState.currentBar === 1 && stepIndex === 0 && gameState.nextOfferBar === 1 && !gameState.isFinished) {
-                gameState.nextOfferBar = 5; // 次回は5小節目
+                gameState.nextOfferBar = 5;
                 if (!gameState.isReplayMode) {
                     requestAnimationFrame(() => {
                         triggerCardSelectModal();
@@ -1199,21 +1175,18 @@
                 updateUIForStep(stepIndex, activeChord, bonuses);
             });
 
-            // 1. Driving 8-Beat Sub Bass on Strong / Marusa / NikoIchi Bonus
             if (bonuses.isStrong || bonuses.isRoyalRoad) {
                 if (stepIndex % 2 === 0) {
                     triggerStrongBassNote(activeChord.rootNote, time);
                 }
             }
 
-            // 2. Royal Road Bonus: Distortion Guitar 8-Beat Cutting
             if (bonuses.isRoyalRoad) {
                 if (stepIndex % 2 === 0) {
                     triggerDistortionGuitarCutting(activeChord.notes, time);
                 }
             }
 
-            // 3. Marusa Bonus: Key Harmonica (Pianica) Melodic Top Notes
             if (bonuses.isMarusa) {
                 if (stepIndex === 0 || stepIndex === 6 || stepIndex === 12) {
                     const topNote = activeChord.notes[activeChord.notes.length - 1];
@@ -1221,31 +1194,27 @@
                 }
             }
 
-            // 4. Canon Bonus: Pluck Synth "タッタタタッタタタッ" Rhythmic Step Melody
             if (bonuses.isCanon) {
                 const canonRhythmSteps = [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15];
                 if (canonRhythmSteps.includes(stepIndex)) {
                     const noteIdx = stepIndex % activeChord.notes.length;
-                    const freq = getNoteFrequency(activeChord.notes[noteIdx], 12); // Octave up
+                    const freq = getNoteFrequency(activeChord.notes[noteIdx], 12);
                     triggerPluckSynthNote(freq, time);
                 }
             }
 
-            // 5. NikoIchi Bonus: E.Piano Whole-Note Glissando/Arpeggio Sweep
             if (bonuses.isNikoIchi) {
                 if (stepIndex === 0) {
                     triggerEPianoGlissando(activeChord.notes, time);
                 }
             }
 
-            // 6. Komuro Bonus: Synth Brass Stabs
             if (bonuses.isKomuro) {
                 if ([0, 3, 6, 10, 12].includes(stepIndex)) {
                     triggerSynthBrassStab(activeChord.notes, time);
                 }
             }
 
-            // Active Decks Standard Audio Playback
             const activeTones = gameState.decks.TONE.slice(0, 4);
             const activeBeats = gameState.decks.BEAT.slice(0, 4);
             const activePhrases = gameState.decks.PHRASE.slice(0, 4);
@@ -1379,28 +1348,28 @@
                 const stockCard = currentDeck[4];
 
                 const cardEl = document.createElement('div');
-                cardEl.className = `p-4 rounded-2xl bg-slate-900 border-2 border-${catInfo.color}-500/50 hover:border-${catInfo.color}-400 text-left flex flex-col justify-between cursor-pointer transition transform hover:-translate-y-1 shadow-xl glow-${catInfo.color} relative overflow-hidden group`;
+                cardEl.className = `p-2.5 rounded-2xl bg-slate-900 border-2 border-${catInfo.color}-500/50 hover:border-${catInfo.color}-400 text-left flex flex-col justify-between cursor-pointer transition transform hover:-translate-y-0.5 shadow-xl glow-${catInfo.color} relative overflow-hidden group`;
                 
                 cardEl.onclick = () => selectCardFromOffer(card);
 
                 cardEl.innerHTML = `
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <div class="flex justify-between items-center">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-${catInfo.color}-950 text-${catInfo.color}-300 border border-${catInfo.color}-700/50 uppercase">
+                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-${catInfo.color}-950 text-${catInfo.color}-300 border border-${catInfo.color}-700/50 uppercase">
                                 <i class="fa-solid ${catInfo.icon} mr-1"></i> ${catInfo.name}
                             </span>
-                            ${isStockReplaced ? `<span class="text-[10px] text-amber-400 font-bold"><i class="fa-solid fa-arrows-rotate"></i> ストック置換</span>` : ''}
+                            ${isStockReplaced ? `<span class="text-[9px] text-amber-400 font-bold"><i class="fa-solid fa-arrows-rotate"></i> ストック置換</span>` : ''}
                         </div>
-                        <h3 class="text-base font-bold text-white group-hover:text-${catInfo.color}-300 transition">${card.title}</h3>
-                        <p class="text-xs text-slate-400 leading-snug">${card.desc}</p>
+                        <h3 class="text-sm font-bold text-white group-hover:text-${catInfo.color}-300 transition">${card.title}</h3>
+                        <p class="text-[10px] text-slate-400 leading-tight">${card.desc}</p>
                     </div>
 
-                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                    <div class="mt-2 pt-2 border-t border-slate-800 flex justify-between items-center">
                         ${isStockReplaced 
-                            ? `<span class="text-[10px] text-red-400">⚠️ 5枠ストック「${stockCard ? stockCard.title : ''}」と入れ替わります</span>`
-                            : `<span class="text-[10px] text-emerald-400">✓ 空きスロットへ追加</span>`
+                            ? `<span class="text-[9px] text-red-400 truncate max-w-[140px]">⚠️ 置換: ${stockCard ? stockCard.title : ''}</span>`
+                            : `<span class="text-[9px] text-emerald-400">✓ 空きスロット追加</span>`
                         }
-                        <span class="text-xs font-bold text-white bg-slate-800 px-2 py-1 rounded-lg">選択 <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                        <span class="text-[10px] font-bold text-white bg-slate-800 px-2 py-0.5 rounded-lg">選択 <i class="fa-solid fa-arrow-right ml-1"></i></span>
                     </div>
                 `;
                 container.appendChild(cardEl);
@@ -1590,7 +1559,6 @@
                     const isPickupSelected = (selectedSwapCard && selectedSwapCard.category === cat && selectedSwapCard.index === i);
                     const isChordBonusActive = (cat === 'CHORD' && !isStock && bonuses.bonusActiveIndices[i]);
 
-                    // Check if corresponding TONE in this column is Rhythm (disables Phrase effect)
                     const currentToneInCol = gameState.decks.TONE[i];
                     const isRhythmToneInCol = (currentToneInCol && currentToneInCol.toneType === 'rhythm');
                     const isPhraseDisabled = (cat === 'PHRASE' && isRhythmToneInCol);
@@ -1598,11 +1566,10 @@
                     const slotEl = document.createElement('div');
                     const catInfo = CARD_CATEGORIES[cat];
 
-                    // Base container wrapper with vertical divider border
                     let colBorderClass = (i < 4) ? 'border-r border-slate-800/80 pr-1 ' : '';
 
                     if (card) {
-                        let classes = colBorderClass + `p-1.5 rounded-xl border flex flex-col justify-between text-[10px] card-interactive shadow-md relative cursor-pointer select-none `;
+                        let classes = colBorderClass + `px-1.5 py-1 rounded-lg border flex flex-col justify-between text-[9px] card-interactive shadow-md relative cursor-pointer select-none min-h-[38px] `;
                         
                         if (isPhraseDisabled) {
                             classes += `bg-slate-950/60 border-slate-800 opacity-40 grayscale-[40%] `;
@@ -1620,17 +1587,17 @@
                         slotEl.onclick = () => handleCardSlotClick(cat, i);
 
                         slotEl.innerHTML = `
-                            <div class="font-bold text-${catInfo.color}-300 truncate">${card.title}</div>
-                            <div class="text-[9px] text-slate-400 truncate">${card.desc}</div>
-                            ${isChordBonusActive ? `<div class="text-[8px] font-black text-amber-300 truncate mt-0.5">⚡ BONUS</div>` : ''}
-                            ${isPhraseDisabled ? `<div class="text-[8px] font-bold text-slate-400 mt-0.5">🚫 効果なし</div>` : ''}
-                            <div class="absolute -top-1 -right-1 px-1 rounded-full ${isStock ? 'bg-amber-500 text-slate-950' : `bg-${catInfo.color}-500 text-slate-950`} font-black text-[8px] flex items-center justify-center">
+                            <div class="font-bold text-${catInfo.color}-300 truncate text-[9px] leading-tight">${card.title}</div>
+                            <div class="text-[8px] text-slate-400 truncate leading-tight">${card.desc}</div>
+                            ${isChordBonusActive ? `<div class="text-[7px] font-black text-amber-300 truncate mt-0.5">⚡ BONUS</div>` : ''}
+                            ${isPhraseDisabled ? `<div class="text-[7px] font-bold text-slate-400 mt-0.5">🚫 効果なし</div>` : ''}
+                            <div class="absolute -top-1 -right-1 px-1 rounded-full ${isStock ? 'bg-amber-500 text-slate-950' : `bg-${catInfo.color}-500 text-slate-950`} font-black text-[7px] flex items-center justify-center">
                                 ${isStock ? 'STK' : (i + 1)}
                             </div>
-                            ${isPickupSelected ? `<div class="absolute inset-0 rounded-xl bg-cyan-400/10 pointer-events-none border-2 border-cyan-300"></div>` : ''}
+                            ${isPickupSelected ? `<div class="absolute inset-0 rounded-lg bg-cyan-400/10 pointer-events-none border-2 border-cyan-300"></div>` : ''}
                         `;
                     } else {
-                        let emptyClasses = colBorderClass + `rounded-xl border border-dashed flex items-center justify-center text-[9px] font-mono cursor-pointer transition `;
+                        let emptyClasses = colBorderClass + `rounded-lg border border-dashed flex items-center justify-center text-[8px] font-mono cursor-pointer transition min-h-[38px] `;
                         
                         if (isPhraseDisabled) {
                             emptyClasses += `border-slate-800 bg-slate-950/20 text-slate-600 opacity-40 `;
@@ -1661,9 +1628,9 @@
             for (let i = 0; i < 4; i++) {
                 const led = document.getElementById(`beat-led-${i}`);
                 if (i === currentBeatIndex) {
-                    led.className = 'w-3 h-3 rounded-full bg-cyan-400 glow-cyan scale-110';
+                    led.className = 'w-2.5 h-2.5 rounded-full bg-cyan-400 glow-cyan scale-110';
                 } else {
-                    led.className = 'w-3 h-3 rounded-full bg-slate-700';
+                    led.className = 'w-2.5 h-2.5 rounded-full bg-slate-700';
                 }
             }
 
@@ -1673,7 +1640,6 @@
 
             document.getElementById('active-chord-name').innerText = activeChord.title;
 
-            // Render Active Progression Bonus Badges (Updated Names)
             const container = document.getElementById('bonuses-badge-container');
             container.innerHTML = '';
 
@@ -1689,7 +1655,7 @@
 
             activeBadgeList.forEach(b => {
                 const badgeEl = document.createElement('div');
-                badgeEl.className = `${b.bg} font-black px-3 py-1 rounded-full text-xs border border-white/40 shadow-xl animate-bounce`;
+                badgeEl.className = `${b.bg} font-black px-2.5 py-0.5 rounded-full text-[11px] border border-white/40 shadow-xl animate-bounce`;
                 badgeEl.innerText = b.name;
                 container.appendChild(badgeEl);
             });
@@ -1702,12 +1668,12 @@
             const btnAdv = document.getElementById('mode-opt-advance');
 
             if (mode === 'random') {
-                btnRand.className = 'p-3 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-1 shadow-lg glow-cyan';
-                btnAdv.className = 'p-3 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-1';
+                btnRand.className = 'p-2.5 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-0.5 shadow-lg glow-cyan';
+                btnAdv.className = 'p-2.5 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-0.5';
                 document.getElementById('mode-badge').innerText = 'RANDOM';
             } else {
-                btnAdv.className = 'p-3 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-1 shadow-lg glow-cyan';
-                btnRand.className = 'p-3 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-1';
+                btnAdv.className = 'p-2.5 rounded-2xl border-2 border-cyan-500 bg-cyan-950/40 text-left transition flex flex-col gap-0.5 shadow-lg glow-cyan';
+                btnRand.className = 'p-2.5 rounded-2xl border-2 border-slate-700 bg-slate-800/60 hover:border-slate-500 text-left transition flex flex-col gap-0.5';
                 document.getElementById('mode-badge').innerText = 'ADVANCE';
             }
         }
@@ -1746,76 +1712,82 @@
                 <div>アクティブ音色: <span class="text-fuchsia-300">${activeTones.map(t => t.title).join(', ') || 'なし'}</span></div>
             `;
 
-            // Calculate Music Style Matrix Position (X: Nori vs Yuru / Y: Age vs Chill)
-            let xScore = 0; // Negative = Yuru (ユル), Positive = Nori (ノリ)
-            let yScore = 0; // Negative = Chill (チル), Positive = Age (アゲ)
+            // Calculate Music Style Matrix Position
+            // 1. Evaluate Tone & Beat for X-Axis (Nori vs Yuru) - Excluding initial Kick 't_rhythm_kick'
+            const tonesExcludingKick = activeTones.filter(t => t.id !== 't_rhythm_kick');
+            let xRaw = 0;
 
-            // 1. Evaluate Tone & Beat for X-Axis (Nori vs Yuru)
-            activeTones.forEach(t => {
-                if (t.toneType === 'rhythm') xScore += 3.5;
-                if (t.toneType === 'short') xScore += 1.0;
-                if (t.toneType === 'long') xScore -= 3.0;
+            tonesExcludingKick.forEach(t => {
+                if (t.toneType === 'rhythm') xRaw += 3.5;
+                else if (t.toneType === 'short') xRaw += 1.5;
+                else if (t.toneType === 'long') xRaw -= 2.5;
             });
 
             activeBeats.forEach(b => {
-                const density = b.pattern.reduce((acc, v) => acc + v, 0);
-                if (density >= 10) xScore += 3.0;
-                else if (density <= 5) xScore -= 3.0;
+                const density = b.pattern.filter(p => p === 1).length;
+                if (density >= 10) xRaw += 2.5;
+                else if (density <= 4) xRaw -= 2.0;
+                else xRaw += 0.5;
             });
 
-            // 2. Evaluate Progression Bonuses & Harmony for Y-Axis (Age vs Chill)
-            const activeBonuses = checkActiveProgressionBonuses();
-            if (activeBonuses.isRoyalRoad) yScore += 4.0;
-            if (activeBonuses.isMarusa) yScore += 4.5;
-            if (activeBonuses.isCanon) yScore += 3.5;
-            if (activeBonuses.isNikoIchi) yScore += 3.0;
-            if (activeBonuses.isKomuro) yScore += 5.0;
-            if (activeBonuses.isStrong) yScore += 2.0;
+            let xScore = Math.max(-10.0, Math.min(10.0, xRaw));
 
-            if (activeChords.length >= 3) yScore += 2.0;
-            if (activeChords.length <= 1) yScore -= 3.0;
+            // 2. Evaluate Chords & Synergies for Y-Axis (Chill vs Age)
+            const uniqueChords = new Set(activeChords.map(c => c.id)).size;
+            const bonuses = checkActiveProgressionBonuses();
 
-            // Clamp scores between -10 and +10
-            xScore = Math.max(-10, Math.min(10, xScore));
-            yScore = Math.max(-10, Math.min(10, yScore));
+            let bonusCount = (bonuses.isStrong ? 1 : 0) + 
+                             (bonuses.isRoyalRoad ? 1 : 0) + 
+                             (bonuses.isMarusa ? 1 : 0) + 
+                             (bonuses.isCanon ? 1 : 0) + 
+                             (bonuses.isNikoIchi ? 1 : 0) + 
+                             (bonuses.isKomuro ? 1 : 0);
 
-            // Map -10..+10 to percentage 10%..90% for UI Pin positioning
-            const leftPercent = 50 + (xScore / 10) * 38;
-            const topPercent = 50 - (yScore / 10) * 38; // Inverted Y for CSS top
+            let yScore = 0;
 
-            const pinEl = document.getElementById('matrix-plot-pin');
-            pinEl.style.left = `${leftPercent}%`;
-            pinEl.style.top = `${topPercent}%`;
-
-            // Determine Style Title & Description
-            let styleTag = 'スタンダード';
-            let styleDesc = '';
-
-            if (yScore >= 2.0 && xScore >= 2.0) {
-                styleTag = '🔥 アゲ系 × ノリ系';
-                styleDesc = '【ハイテンション・フロアキラー】重厚なリズムと華やかなコード進行ボーナスが融合！フロアを熱狂させるエネルギッシュなトラックです。';
-            } else if (yScore >= 2.0 && xScore < 2.0) {
-                styleTag = '✨ アゲ系 × ユル系';
-                styleDesc = '【エモーショナル・ドラマチック】ゆったりした空間系サウンドでありながら、ドラマチックなコード進行が胸を打つ情感豊かなアンサンブルです。';
-            } else if (yScore < 2.0 && xScore >= 2.0) {
-                styleTag = '🎧 チル系 × ノリ系';
-                styleDesc = '【ローファイ・グルーヴィー】軽快なリズムパターンに乗せたスタイリッシュなノリ。作業用BGMやドライブに最適なダンス系グルーヴです。';
+            if (bonusCount === 0) {
+                if (uniqueChords <= 1) {
+                    yScore = -10.0; // Chill max when single chord & no bonus
+                } else {
+                    // Unique chords 2~4 scale up towards center 0.0
+                    yScore = -10.0 + ((uniqueChords - 1) / 3.0) * 10.0;
+                }
             } else {
-                styleTag = '🌿 チル系 × ユル系';
-                styleDesc = '【アンビエント・リラクゼーション】持続音の温かみと穏やかなビートが心地よい。心身を解きほぐす至高のヒーリングサウンドです。';
+                // Synergies occurred: increase Y-score from 0.0 towards +10.0 (Age)
+                yScore = Math.min(10.0, Math.max(0.0, (bonusCount * 3.5) + ((uniqueChords - 1) * 1.0)));
             }
 
-            document.getElementById('matrix-style-tag').innerText = styleTag;
-            document.getElementById('matrix-desc').innerText = styleDesc;
+            // Position Matrix Plot Pin
+            const pin = document.getElementById('matrix-plot-pin');
+            const xPct = Math.max(5, Math.min(95, ((xScore + 10) / 20) * 100));
+            const yPct = Math.max(5, Math.min(95, ((10 - yScore) / 20) * 100));
 
-            const btnDownload = document.getElementById('btn-download-replay');
-            if (gameState.targetBars > 200 || gameState.isReplayMode) {
-                btnDownload.classList.add('hidden');
+            pin.style.left = `${xPct}%`;
+            pin.style.top = `${yPct}%`;
+
+            const styleTag = document.getElementById('matrix-style-tag');
+            const descEl = document.getElementById('matrix-desc');
+
+            if (yScore >= 0 && xScore >= 0) {
+                styleTag.innerText = 'アゲ × ノリ (ハイテンション)';
+                descEl.innerText = '躍動感あふれるビートと強力な和音進行が融合したハイテンション・ダンスチューン！ダンジョンを最高潮に盛り上げます。';
+            } else if (yScore >= 0 && xScore < 0) {
+                styleTag.innerText = 'アゲ × ユル (エモーショナル)';
+                descEl.innerText = '広がりある豊かな持続音とシナジーコードが生み出すエモーショナル・ポップ。情緒的でドラマチックな名曲です。';
+            } else if (yScore < 0 && xScore >= 0) {
+                styleTag.innerText = 'チル × ノリ (グルーヴィー)';
+                descEl.innerText = 'ミニマルなコードに乗せて心地よいリズムを刻むグルーヴィー・ロファイ。どこかクセになるチル系サウンドです。';
             } else {
-                btnDownload.classList.remove('hidden');
+                styleTag.innerText = 'チル × ユル (アンビエント)';
+                descEl.innerText = '洗練されたシンプルな和音と静かな響きが包み込むアンビエント・ドリーム。心地よい瞑想世界へと誘います。';
             }
 
             document.getElementById('modal-finish').classList.remove('hidden');
+        }
+
+        function closeFinishModalAndKeepPlaying() {
+            document.getElementById('modal-finish').classList.add('hidden');
+            startPlayback();
         }
 
         function downloadReplayData() {
@@ -1835,85 +1807,77 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const loadedLog = JSON.parse(e.target.result);
-                    if (!loadedLog || !loadedLog.events) {
-                        alert('無効なリプレイデータファイルです。');
-                        return;
+                    const data = JSON.parse(e.target.result);
+                    if (data && data.events) {
+                        gameState.replayLog = data;
+                        gameState.bpm = data.bpm || 120;
+                        gameState.targetBars = data.targetBars || 32;
+                        gameState.mode = data.mode || 'advance';
+                        gameState.isReplayMode = true;
+
+                        document.getElementById('hud-bpm-val').innerText = gameState.bpm;
+                        document.getElementById('replay-indicator').classList.remove('hidden');
+                        document.getElementById('modal-start').classList.add('hidden');
+
+                        resetDeckToInitial();
+                        gameState.currentBar = 1;
+                        gameState.currentStep = 0;
+                        gameState.nextOfferBar = 1;
+                        gameState.isFinished = false;
+
+                        startPlayback();
                     }
-
-                    gameState.isReplayMode = true;
-                    gameState.replayLog = loadedLog;
-                    gameState.mode = loadedLog.mode || 'advance';
-                    gameState.bpm = loadedLog.bpm || 120;
-                    gameState.targetBars = loadedLog.targetBars || 32;
-
-                    document.getElementById('hud-bpm-val').innerText = gameState.bpm;
-                    document.getElementById('mode-badge').innerText = gameState.mode.toUpperCase();
-                    document.getElementById('replay-indicator').classList.remove('hidden');
-
-                    document.getElementById('modal-start').classList.add('hidden');
-                    
-                    resetDeckToInitial();
-                    updateDeckUI();
-                    startPlayback();
-
                 } catch (err) {
-                    console.error(err);
+                    console.error("Invalid Replay JSON File", err);
                 }
             };
             reader.readAsText(file);
         }
 
-        function closeFinishModalAndKeepPlaying() {
-            document.getElementById('modal-finish').classList.add('hidden');
-            gameState.targetBars = 9999;
-            startPlayback();
-        }
-
         function resetToTitle() {
             pausePlayback();
             gameState.currentBar = 1;
-            gameState.currentBeat = 0;
             gameState.currentStep = 0;
+            gameState.nextOfferBar = 1; // Explicitly reset nextOfferBar to restore card offers
             gameState.isFinished = false;
             gameState.isReplayMode = false;
-            gameState.replayLog.events = [];
-
-            document.getElementById('replay-indicator').classList.add('hidden');
-
+            gameState.replayLog = {
+                bpm: gameState.bpm,
+                targetBars: gameState.targetBars,
+                mode: gameState.mode,
+                events: []
+            };
             resetDeckToInitial();
-            updateDeckUI();
-
+            document.getElementById('replay-indicator').classList.add('hidden');
             document.getElementById('modal-finish').classList.add('hidden');
+            document.getElementById('modal-card-select').classList.add('hidden');
             document.getElementById('modal-start').classList.remove('hidden');
+            updateDeckUI();
         }
 
-        window.onload = () => {
+        window.onload = function() {
             initCanvas();
             resetDeckToInitial();
-            updateDeckUI();
 
-            document.getElementById('btn-start-game').onclick = () => {
-                gameState.isReplayMode = false;
-                gameState.replayLog.events = [];
-                document.getElementById('replay-indicator').classList.add('hidden');
-                document.getElementById('modal-start').classList.add('hidden');
-                startPlayback();
+            document.getElementById('btn-toggle-play').onclick = function() {
+                if (gameState.isPlaying) pausePlayback();
+                else startPlayback();
             };
 
-            document.getElementById('btn-toggle-play').onclick = () => {
-                if (gameState.isPlaying) {
-                    pausePlayback();
-                } else {
-                    startPlayback();
-                }
-            };
-
-            document.getElementById('btn-reset-game').onclick = () => {
+            document.getElementById('btn-reset-game').onclick = function() {
                 resetToTitle();
             };
 
-            document.getElementById('master-volume').oninput = (e) => {
+            document.getElementById('btn-start-game').onclick = function() {
+                document.getElementById('modal-start').classList.add('hidden');
+                gameState.currentBar = 1;
+                gameState.currentStep = 0;
+                gameState.nextOfferBar = 1;
+                gameState.isFinished = false;
+                startPlayback();
+            };
+
+            document.getElementById('master-volume').oninput = function(e) {
                 if (masterGain && audioCtx) {
                     masterGain.gain.setValueAtTime(parseFloat(e.target.value), audioCtx.currentTime);
                 }
