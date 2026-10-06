@@ -3,392 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>週刊シンセ界 | Web Synth Collection</title>
+  <title>たくさん、シンセカイ | Web Synth Collection</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts (ゴシック体メイン: M PLUS Rounded 1c & Noto Sans JP) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
   <style>
-    :root {
-      --bg-color: #08080c;
-      --card-bg: rgba(18, 18, 26, 0.75);
-      --card-border: #232334;
-      --accent-red: #ff3344;
-      --accent-gold: #ffcc00;
-      --accent-cyan: #00f0ff;
-      --accent-purple: #a000ff;
-      --text-main: #f0f0f5;
-      --text-dim: #8a8a9e;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
     body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif;
+      background: linear-gradient(135deg, #090d16 0%, #111827 40%, #1e1028 75%, #090d16 100%);
+      background-attachment: fixed;
+      color: #f1f5f9;
+    }
+
+    /* グラスモーフィズム（透明感のある背景） */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .glass-card:not(.coming-soon):hover,
+    .glass-card.active {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(56, 189, 248, 0.5);
+      transform: translateY(-6px);
+      box-shadow: 0 16px 36px rgba(56, 189, 248, 0.2);
+    }
+
+    /* 背景グリッドパターン */
+    .bg-grid-pattern {
+      background-size: 36px 36px;
       background-image: 
-        radial-gradient(circle at 15% 20%, rgba(255, 51, 68, 0.08) 0%, transparent 45%),
-        radial-gradient(circle at 85% 80%, rgba(0, 240, 255, 0.06) 0%, transparent 45%);
-      overflow-x: hidden;
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     }
 
-    /* Header */
-    header {
-      padding: 24px 8%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--card-border);
-      backdrop-filter: blur(10px);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(8, 8, 12, 0.8);
+    /* 光彩シャドウ */
+    .glow-pink { box-shadow: 0 0 30px rgba(244, 63, 94, 0.45); }
+    .glow-cyan { box-shadow: 0 0 30px rgba(56, 189, 248, 0.45); }
+    .glow-gold { box-shadow: 0 0 30px rgba(251, 191, 36, 0.45); }
+
+    /* トランジション用クラス */
+    .fade-content {
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    .fade-out {
+      opacity: 0;
+      transform: translateY(6px);
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand-logo {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--accent-red), var(--accent-gold));
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-      color: #000;
-      font-size: 1.1rem;
-      box-shadow: 0 0 12px rgba(255, 51, 68, 0.4);
-    }
-
-    .brand-title {
-      font-size: 1.2rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      background: linear-gradient(90deg, #ffffff, var(--text-dim));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .nav-links a {
-      color: var(--text-dim);
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: color 0.2s;
-    }
-    .nav-links a:hover { color: var(--accent-cyan); }
-
-    /* Main Container */
-    main {
-      flex: 1;
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 40px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 48px;
-    }
-
-    /* Featured Hero Banner */
-    .hero {
-      position: relative;
-      background: linear-gradient(135deg, rgba(30, 15, 25, 0.8), rgba(15, 18, 30, 0.8));
-      border: 1px solid rgba(255, 51, 68, 0.3);
-      border-radius: 20px;
-      padding: 48px;
-      overflow: hidden;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 32px;
-      align-items: center;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -50%; left: -50%;
-      width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(255, 51, 68, 0.12) 0%, transparent 60%);
-      pointer-events: none;
-    }
-
-    .hero-tag {
-      display: inline-block;
-      padding: 4px 12px;
-      background: rgba(255, 51, 68, 0.2);
-      border: 1px solid var(--accent-red);
-      color: var(--accent-red);
-      border-radius: 20px;
-      font-size: 0.8rem;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin-bottom: 16px;
-    }
-
-    .hero-title {
-      font-size: 2.8rem;
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 16px;
-      color: #fff;
-    }
-
-    .hero-desc {
-      color: var(--text-dim);
-      font-size: 1rem;
-      line-height: 1.6;
-      margin-bottom: 28px;
-    }
-
-    .btn-play {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 36px;
-      background: linear-gradient(135deg, var(--accent-red), #b3001b);
-      color: #fff;
-      text-decoration: none;
-      font-weight: bold;
-      border-radius: 30px;
-      font-size: 1rem;
-      box-shadow: 0 0 25px rgba(255, 51, 68, 0.5);
-      transition: all 0.3s ease;
-      width: fit-content;
-    }
-
-    .btn-play:hover {
-      transform: translateY(-2px) scale(1.03);
-      box-shadow: 0 0 35px rgba(255, 51, 68, 0.8);
-    }
-
-    .hero-visual {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .dharma-preview-card {
-      width: 100%;
-      max-width: 320px;
-      height: 320px;
+    /* 達磨用プレビュー表示 */
+    .dharma-circle {
       background: radial-gradient(circle, #2a080c 0%, #100508 100%);
-      border: 2px solid var(--accent-gold);
-      border-radius: 50%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 0 40px rgba(255, 204, 0, 0.25);
+      border: 2px solid #fbbf24;
+      box-shadow: 0 0 35px rgba(251, 191, 36, 0.3);
       animation: float 6s ease-in-out infinite;
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-12px); }
-    }
-
-    .dharma-symbol {
-      font-size: 5rem;
-      color: var(--accent-gold);
-      text-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
-      font-family: serif;
-    }
-
-    /* Section Title */
-    .section-title {
-      font-size: 1.4rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      color: var(--text-main);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--card-border);
-    }
-
-    /* Grid Layout */
-    .synth-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-    }
-
-    /* Synth Card */
-    .synth-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      backdrop-filter: blur(8px);
-      transition: all 0.3s ease;
-      text-decoration: none;
-      color: inherit;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .synth-card:not(.coming-soon):hover {
-      border-color: var(--accent-cyan);
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(0, 240, 255, 0.15);
-    }
-
-    .card-num {
-      font-size: 0.8rem;
-      color: var(--accent-cyan);
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    .card-title {
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-
-    .card-desc {
-      font-size: 0.88rem;
-      color: var(--text-dim);
-      line-height: 1.5;
-      margin-bottom: 20px;
-    }
-
-    .card-tags {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .tag {
-      font-size: 0.72rem;
-      padding: 3px 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 4px;
-      color: var(--text-dim);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    /* Coming Soon Card */
-    .synth-card.coming-soon {
-      opacity: 0.5;
-      border-style: dashed;
-      cursor: not-allowed;
-    }
-
-    /* Footer */
-    footer {
-      padding: 32px 8%;
-      border-top: 1px solid var(--card-border);
-      text-align: center;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-      background: rgba(8, 8, 12, 0.9);
-    }
-
-    /* Responsive */
-    @media (max-width: 868px) {
-      .hero {
-        grid-template-columns: 1fr;
-        padding: 32px 24px;
-        text-align: center;
-      }
-      .btn-play { margin: 0 auto; }
-      .hero-visual { display: none; }
-      .hero-title { font-size: 2.2rem; }
+      50% { transform: translateY(-10px); }
     }
   </style>
 </head>
-<body>
+<body class="bg-grid-pattern min-h-screen flex flex-col justify-between text-slate-100">
 
-  <header>
-    <div class="brand">
-      <div class="brand-logo">法</div>
-      <div class="brand-title">週刊シンセ界</div>
-    </div>
-    <nav class="nav-links">
-      <a href="https://github.com" target="_blank" rel="noopener">GitHub Repository</a>
+  <!-- HEADER -->
+  <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-white/10">
+    <a href="#" class="flex items-center space-x-3 group">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-pink-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg glow-pink transition transform group-hover:rotate-6">
+        ✨
+      </div>
+      <div>
+        <h1 class="font-black text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-200 tracking-wider">
+          たくさん、シンセカイ
+        </h1>
+        <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Web Synth Collection</p>
+      </div>
+    </a>
+    <nav class="text-xs text-slate-400 hover:text-cyan-300 transition font-bold">
+      <a href="https://github.com" target="_blank" rel="noopener" class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+        <i class="fa-brands fa-github"></i> GitHub Repository
+      </a>
     </nav>
   </header>
 
-  <main>
-    <!-- Featured Synth Hero Banner -->
-    <section class="hero">
-      <div class="hero-content">
-        <span class="hero-tag">週刊シンセ界 #1</span>
-        <h1 class="hero-title">Dharma (達磨)</h1>
-        <p class="hero-desc">
-          3Dで再現された達磨の物理挙動とシンセサイザーのパラメーターがリアルタイムでインタラクティブに連動。転倒して頭部が沈むと「怒髪天モード」が起動し、強力なビットクラッシャーエフェクトが炸裂します。
-        </p>
-        <a href="dharma.html" class="btn-play">
-          <span>起動する</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-        </a>
-      </div>
-      <div class="hero-visual">
-        <div class="dharma-preview-card">
-          <div class="dharma-symbol">法</div>
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-10">
+
+    <!-- HERO / DYNAMIC SYNTH INTRO AREA -->
+    <section class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15">
+      <!-- Ambient Glow Balls -->
+      <div class="absolute -top-24 -left-24 w-72 h-72 bg-pink-500/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+        
+        <!-- Left: Details & Play Button -->
+        <div id="hero-text-container" class="lg:col-span-8 space-y-5 fade-content">
+          <div class="flex items-center gap-3">
+            <span id="hero-tag" class="px-3.5 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/40 text-xs font-bold tracking-wider">
+              週刊シンセ界 #1
+            </span>
+            <span id="hero-number" class="text-xs font-black text-cyan-400 tracking-widest uppercase">
+              #01 SELECTED
+            </span>
+          </div>
+
+          <h2 id="hero-title" class="text-3xl sm:text-5xl font-black text-white leading-tight">
+            Dharma (達磨)
+          </h2>
+
+          <p id="hero-desc" class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-2xl">
+            3Dで再現された達磨の物理挙動とシンセサイザーのパラメーターがリアルタイムでインタラクティブに連動。転倒して頭部が沈むと「怒髪天モード」が起動し、強力なビットクラッシャーエフェクトが炸裂します。
+          </p>
+
+          <div class="pt-2 flex flex-wrap items-center gap-4">
+            <a id="hero-play-btn" href="dharma.html" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg glow-pink transition transform active:scale-95">
+              <span>起動する</span>
+              <i class="fa-solid fa-play text-xs"></i>
+            </a>
+
+            <!-- Tag Chips -->
+            <div id="hero-tags" class="flex flex-wrap gap-2 text-xs font-bold text-slate-400">
+              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">Three.js</span>
+              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">Web Audio API</span>
+              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">3D Physics</span>
+            </div>
+          </div>
         </div>
+
+        <!-- Right: Preview Visual -->
+        <div class="lg:col-span-4 flex justify-center items-center">
+          <div id="hero-visual-box" class="w-56 h-56 sm:w-64 sm:h-64 rounded-full flex items-center justify-center relative fade-content">
+            <div id="hero-visual-inner" class="dharma-circle w-full h-full rounded-full flex items-center justify-center">
+              <span id="hero-symbol" class="text-6xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">
+                法
+              </span>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
-    <!-- Collection Section -->
-    <section>
-      <h2 class="section-title">作品コレクション</h2>
-      <br>
-      <div class="synth-grid">
-        
-        <!-- #1 Dharma -->
-        <a href="dharma.html" class="synth-card">
-          <div>
-            <div class="card-num">#01</div>
-            <h3 class="card-title">Dharma</h3>
-            <p class="card-desc">倒れて怒る達磨シンセサイザー。3D物理モーション、ウェーブテーブル合成、怒髪天ビットクラッシャー搭載。</p>
+    <!-- COLLECTION SECTION -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <h3 class="text-xl font-black text-slate-100 tracking-wide flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-cyan-400 text-base"></i> 作品コレクション
+        </h3>
+        <span class="text-xs text-slate-400 font-bold">カードにマウスを乗せると上のエリアが切り替わります</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- CARD 1: DHARMA -->
+        <a href="dharma.html" 
+           class="synth-card glass-card rounded-2xl p-6 flex flex-col justify-between gap-6 active"
+           data-id="dharma"
+           data-number="#01"
+           data-tag="週刊シンセ界 #1"
+           data-tag-color="pink"
+           data-title="Dharma (達磨)"
+           data-desc="3Dで再現された達磨の物理挙動とシンセサイザーのパラメーターがリアルタイムでインタラクティブに連動。転倒して頭部が沈むと「怒髪天モード」が起動し、強力なビットクラッシャーエフェクトが炸裂します。"
+           data-link="dharma.html"
+           data-symbol="法"
+           data-symbol-type="kanji"
+           data-tags="Three.js,Web Audio API,3D Physics">
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-cyan-400 tracking-wider">#01</span>
+              <span class="text-2xl">🧘‍♂️</span>
+            </div>
+            <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
+              Dharma
+            </h4>
+            <p class="text-xs text-slate-300 leading-relaxed font-bold">
+              倒れて怒る達磨シンセサイザー。3D物理モーション、ウェーブテーブル合成、怒髪天ビットクラッシャー搭載。
+            </p>
           </div>
-          <div class="card-tags">
-            <span class="tag">Three.js</span>
-            <span class="tag">Web Audio API</span>
-            <span class="tag">3D Physics</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Three.js</span>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Web Audio API</span>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">3D Physics</span>
           </div>
         </a>
 
-        <!-- #2 Coming Soon -->
-        <div class="synth-card coming-soon">
-          <div>
-            <div class="card-num">#02</div>
-            <h3 class="card-title">Coming Soon...</h3>
-            <p class="card-desc">次作 Web Synth プロジェクトを開発中。準備が整い次第公開されます。</p>
+        <!-- CARD 2: ROGUE-LIKE SYNTH -->
+        <a href="r_l_r_l_synth.html" 
+           class="synth-card glass-card rounded-2xl p-6 flex flex-col justify-between gap-6"
+           data-id="rogue"
+           data-number="#02"
+           data-tag="NEW / GAME SYNTH"
+           data-tag-color="cyan"
+           data-title="ローグライク・シンセ"
+           data-desc="四分音符くんとすごろくを進みながら、コード・ビート・トーン・フレーズのカードを獲得・構築するシンセRPG。王道進行ボーナスや楽曲傾向マトリクス解析を搭載！"
+           data-link="r_l_r_l_synth.html"
+           data-symbol="🎲"
+           data-symbol-type="emoji"
+           data-tags="Web Audio API,Game Synth,Music RPG">
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-cyan-400 tracking-wider">#02</span>
+              <span class="text-2xl">🎲</span>
+            </div>
+            <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
+              ローグライク・シンセ
+            </h4>
+            <p class="text-xs text-slate-300 leading-relaxed font-bold">
+              四分音符くんとすごろくを進みながら、コード・ビート・トーン・フレーズのカードを獲得・構築するシンセRPG。王道進行ボーナスや楽曲傾向マトリクス解析を搭載。
+            </p>
           </div>
-          <div class="card-tags">
-            <span class="tag">Web Audio</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Web Audio API</span>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Game Synth</span>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Music RPG</span>
           </div>
-        </div>
+        </a>
 
-        <!-- #3 Coming Soon -->
-        <div class="synth-card coming-soon">
-          <div>
-            <div class="card-num">#03</div>
-            <h3 class="card-title">Coming Soon...</h3>
-            <p class="card-desc">次作 Web Synth プロジェクトを開発中。準備が整い次第公開されます。</p>
+        <!-- CARD 3: COMING SOON -->
+        <div class="glass-card coming-soon opacity-50 rounded-2xl p-6 flex flex-col justify-between gap-6 border-dashed cursor-not-allowed">
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-slate-500 tracking-wider">#03</span>
+              <span class="text-2xl">✨</span>
+            </div>
+            <h4 class="text-xl font-black text-slate-400">
+              Coming Soon...
+            </h4>
+            <p class="text-xs text-slate-400 leading-relaxed font-bold">
+              次作 Web Synth プロジェクトを開発中。準備が整い次第公開されます。
+            </p>
           </div>
-          <div class="card-tags">
-            <span class="tag">Web Audio</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-400">Web Audio</span>
           </div>
         </div>
 
@@ -396,9 +261,76 @@
     </section>
   </main>
 
-  <footer>
-    <p>&copy; 週刊シンセ界 / Web Synth World. All rights reserved.</p>
+  <!-- FOOTER -->
+  <footer class="glass-panel py-6 px-6 text-center text-xs text-slate-400 font-bold border-t border-white/10 mt-12">
+    <p>&copy; たくさん、シンセカイ / Web Synth World. All rights reserved.</p>
   </footer>
 
+  <!-- DYNAMIC HOVER JS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const cards = document.querySelectorAll('.synth-card');
+      const textContainer = document.getElementById('hero-text-container');
+      const visualBox = document.getElementById('hero-visual-box');
+      const visualInner = document.getElementById('hero-visual-inner');
+      
+      const heroTag = document.getElementById('hero-tag');
+      const heroNumber = document.getElementById('hero-number');
+      const heroTitle = document.getElementById('hero-title');
+      const heroDesc = document.getElementById('hero-desc');
+      const heroPlayBtn = document.getElementById('hero-play-btn');
+      const heroTags = document.getElementById('hero-tags');
+      const heroSymbol = document.getElementById('hero-symbol');
+
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          // アクティブクラスの切り替え
+          cards.forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+
+          // フェードアウトアニメーション
+          textContainer.classList.add('fade-out');
+          visualBox.classList.add('fade-out');
+
+          setTimeout(() => {
+            // データ取得
+            const number = card.dataset.number;
+            const tag = card.dataset.tag;
+            const title = card.dataset.title;
+            const desc = card.dataset.desc;
+            const link = card.dataset.link;
+            const symbol = card.dataset.symbol;
+            const symbolType = card.dataset.symbolType;
+            const tags = card.dataset.tags ? card.dataset.tags.split(',') : [];
+
+            // HEROコンテンツ更新
+            heroNumber.textContent = `${number} SELECTED`;
+            heroTag.textContent = tag;
+            heroTitle.textContent = title;
+            heroDesc.textContent = desc;
+            heroPlayBtn.setAttribute('href', link);
+
+            // タグの書き換え
+            heroTags.innerHTML = tags.map(t => `<span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">${t.trim()}</span>`).join('');
+
+            // 右側ビジュアルのスタイリング切り替え
+            if (symbolType === 'kanji') {
+              visualInner.className = 'dharma-circle w-full h-full rounded-full flex items-center justify-center';
+              heroSymbol.className = 'text-6xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]';
+              heroSymbol.textContent = symbol;
+            } else {
+              visualInner.className = 'w-full h-full rounded-full flex items-center justify-center bg-gradient-to-tr from-cyan-500/20 via-pink-500/20 to-amber-400/20 border-2 border-cyan-400/40 shadow-[0_0_35px_rgba(56,189,248,0.3)] animate-bounce';
+              heroSymbol.className = 'text-7xl sm:text-8xl';
+              heroSymbol.textContent = symbol;
+            }
+
+            // フェードインアニメーション
+            textContainer.classList.remove('fade-out');
+            visualBox.classList.remove('fade-out');
+          }, 180);
+        });
+      });
+    });
+  </script>
 </body>
 </html>
