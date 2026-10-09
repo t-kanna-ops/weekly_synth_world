@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ぼくたち、水槽楽部です。- 3D Water Wavetable Synthesizer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050811;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        /* ウィンドウ不透明度50% (rgba 0.5) の半透明グラスパネル */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.50);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+        input[type=range] {
+            accent-color: #38bdf8;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="relative w-full h-screen overflow-hidden text-white select-none">
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- UI Overlay Header & Title / How to Play -->
+    <div class="absolute top-4 left-4 right-4 z-10 flex flex-col lg:flex-row justify-between items-start pointer-events-none gap-4">
+        
+        <!-- 1. Title & Play Guide Window -->
+        <div class="glass-panel p-4 rounded-xl pointer-events-auto max-w-md w-full lg:w-auto transition-all duration-300">
+            <!-- Window Header -->
+            <div class="flex items-center justify-between gap-2.5">
+                <div class="flex items-center gap-2.5">
+                    <span class="inline-block w-3.5 h-3.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_12px_#22d3ee]"></span>
+                    <h1 class="text-xl font-bold text-white tracking-wider">ぼくたち、水槽楽部です。</h1>
+                </div>
+                <!-- Minimize Button -->
+                <button id="btn-toggle-guide" class="px-2.5 py-1 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 rounded-lg text-cyan-300 font-semibold transition flex items-center gap-1 shadow">
+                    <span id="guide-toggle-icon">−</span>
+                    <span id="guide-toggle-text">小さくする</span>
+                </button>
+            </div>
+            
+            <!-- Window Body Content -->
+            <div id="panel-guide-content" class="space-y-2 mt-2 transition-all duration-300">
+                <!-- How to Play Explanation -->
+                <div class="text-xs text-slate-200 leading-relaxed border-t border-slate-700/60 pt-2 space-y-1">
+                    <p class="font-semibold text-cyan-300">【このシンセサイザーの遊び方】</p>
+                    <p>🌊 <strong class="text-white">水槽を突く:</strong> 短タップ＝強打（強波紋・金魚パニック） / 長押し＝優しく触れる（静かな波紋・金魚弱反応）。</p>
+                    <p>✨ <strong class="text-white">64Band真円波紋:</strong> 40〜2600Hzの音響スペクトラムが真円の波紋となって底面に広がり、金魚を照らします。</p>
+                    <p>🎲 <strong class="text-white">金魚オート制御:</strong> 上限数（1〜5匹）や周期（0.1s〜10s／手動）で金魚たちをランダム配置。</p>
+                </div>
+
+                <!-- Camera Presets Bar -->
+                <div class="border-t border-slate-700/60 pt-2.5 flex flex-wrap gap-1.5 text-[11px]">
+                    <span class="text-slate-400 self-center mr-1">カメラ視点:</span>
+                    <button id="btn-cam-default" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-600 transition">デフォルト</button>
+                    <button id="btn-cam-side" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-600 transition">真横 (水面線)</button>
+                    <button id="btn-cam-top" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-600 transition">真上 (俯瞰)</button>
+                    <button id="btn-cam-rotate" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 rounded border border-slate-600 transition flex items-center gap-1">
+                        <span>🔄 自動周回</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Settings, FX & Goldfish Control Window -->
+        <div class="glass-panel p-4 rounded-xl pointer-events-auto flex flex-col gap-3 min-w-[310px] w-full lg:w-auto max-h-[88vh] overflow-y-auto no-scrollbar transition-all duration-300">
+            <!-- Window Header -->
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-2 gap-2">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-semibold text-white">エフェクト・設定・金魚</h2>
+                    <span id="fish-count" class="text-xs bg-cyan-500/20 text-cyan-200 border border-cyan-500/30 px-2 py-0.5 rounded-full">1 / 5 匹</span>
+                </div>
+                <!-- Minimize Button -->
+                <button id="btn-toggle-settings" class="px-2.5 py-1 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 rounded-lg text-cyan-300 font-semibold transition flex items-center gap-1 shadow">
+                    <span id="settings-toggle-icon">−</span>
+                    <span id="settings-toggle-text">小さくする</span>
+                </button>
+            </div>
+
+            <!-- Window Body Content -->
+            <div id="panel-settings-content" class="space-y-2.5 text-xs text-slate-200 transition-all duration-300">
+                <!-- Master Volume -->
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span>マスター音量</span>
+                        <span id="vol-val" class="font-mono text-cyan-300">70%</span>
+                    </div>
+                    <input id="slider-vol" type="range" min="0" max="100" step="1" value="70" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Reverb FX Controls -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-cyan-300 block">空間エフェクト: Reverb</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>タイム</span>
+                                <span id="rev-time-val" class="font-mono text-cyan-300">2.5s</span>
+                            </div>
+                            <input id="slider-rev-time" type="range" min="0.5" max="8.0" step="0.1" value="2.5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>センドレベル</span>
+                                <span id="rev-send-val" class="font-mono text-cyan-300">50%</span>
+                            </div>
+                            <input id="slider-rev-send" type="range" min="0" max="100" step="1" value="50" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delay FX Controls -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-cyan-300 block">やまびこエフェクト: Delay</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>タイム</span>
+                                <span id="delay-time-val" class="font-mono text-cyan-300">0.38s</span>
+                            </div>
+                            <input id="slider-delay-time" type="range" min="0.01" max="2.00" step="0.01" value="0.38" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>センドレベル</span>
+                                <span id="delay-send-val" class="font-mono text-cyan-300">35%</span>
+                            </div>
+                            <input id="slider-delay-send" type="range" min="0" max="100" step="1" value="35" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goldfish Max Count Limit Slider -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-cyan-300">金魚の数の上限</span>
+                        <span id="max-fish-val" class="font-mono text-cyan-300 font-bold">5 匹</span>
+                    </div>
+                    <input id="slider-max-fish" type="range" min="1" max="5" step="1" value="5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Goldfish Randomizer Section -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-cyan-300 block">🎲 金魚オートランダム制御</span>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span>ランダム周期</span>
+                            <span id="random-cycle-val" class="font-mono text-cyan-300 font-bold">手動</span>
+                        </div>
+                        <input id="slider-random-cycle" type="range" min="0.1" max="10.1" step="0.1" value="10.1" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <button id="btn-random-trigger" class="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg shadow-lg transform active:scale-95 transition flex items-center justify-center gap-1.5">
+                        <span>🎲</span>
+                        <span id="random-btn-text">金魚を即座にランダム入れ替え</span>
+                    </button>
+                </div>
+
+                <!-- Individual Goldfish Customizer -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-cyan-300 block">手動金魚追加</span>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span>金魚サイズ</span>
+                            <span id="size-val" class="font-mono text-cyan-300">中</span>
+                        </div>
+                        <input id="slider-size" type="range" min="0.5" max="1.5" step="0.1" value="1.0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <span>金魚の色（性格）</span>
+                            <span id="color-val" class="font-mono font-bold text-red-400">赤 (大胆)</span>
+                        </div>
+                        <input id="slider-hue" type="range" min="0" max="360" step="1" value="0" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer" style="background: linear-gradient(to right, #ef4444, #eab308, #22c55e, #06b6d4, #3b82f6, #ef4444);">
+                    </div>
+
+                    <button id="btn-spawn" class="w-full py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs rounded-lg shadow-lg transform active:scale-95 transition">
+                        金魚を水槽に追加 誕生！
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Enable Floating Button -->
+    <div class="absolute bottom-6 left-4 z-10 pointer-events-auto">
+        <button id="btn-audio-start" class="glass-panel px-4 py-2.5 rounded-xl text-xs font-semibold text-cyan-300 flex items-center gap-2 hover:bg-slate-800/80 transition shadow-xl">
+            🔊 オーディオ有効化
+        </button>
+    </div>
+
+    <!-- Main Engine Script -->
+    <script>
+        // --- Global Config ---
+        const CONFIG = {
+            gridSize: 64,
+            waterSize: 12,
+            maxFish: 5,
+            damping: 0.988,
+            baseFishScale: 0.25,
+            maxPolyphony: 64,
+            minTriggerInterval: 0.100 // 100ms
+        };
+
+        // --- Specified Scale Notes ---
+        const SCALE_NOTES = [
+            { note: 'A0',  freq: 27.50 },
+            { note: 'A1',  freq: 55.00 },
+            { note: 'E2',  freq: 82.41 },
+            { note: 'A2',  freq: 110.00 },
+            { note: 'D3',  freq: 146.83 },
+            { note: 'E3',  freq: 164.81 },
+            { note: 'A3',  freq: 220.00 },
+            { note: 'C4',  freq: 261.63 },
+            { note: 'D4',  freq: 293.66 },
+            { note: 'E4',  freq: 329.63 },
+            { note: 'G4',  freq: 392.00 },
+            { note: 'A4',  freq: 440.00 },
+            { note: 'C5',  freq: 523.25 },
+            { note: 'D5',  freq: 587.33 },
+            { note: 'E5',  freq: 659.25 },
+            { note: 'F#5', freq: 739.99 },
+            { note: 'A5',  freq: 880.00 },
+            { note: 'B5',  freq: 987.77 },
+            { note: 'D6',  freq: 1174.66 },
+            { note: 'E6',  freq: 1318.51 },
+            { note: 'F#6', freq: 1479.98 },
+            { note: 'A6',  freq: 1760.00 },
+            { note: 'B6',  freq: 1975.53 }
+        ];
+
+        // --- 1/f Pink Noise Fluctuation Generator ---
+        class PinkNoiseGenerator {
+            constructor() {
+                this.b = [0, 0, 0, 0, 0, 0, 0];
+            }
+            next() {
+                const white = Math.random() * 2 - 1;
+                this.b[0] = 0.99886 * this.b[0] + white * 0.0555179;
+                this.b[1] = 0.99332 * this.b[1] + white * 0.0750759;
+                this.b[2] = 0.96900 * this.b[2] + white * 0.1538520;
+                this.b[3] = 0.86650 * this.b[3] + white * 0.3104856;
+                this.b[4] = 0.55000 * this.b[4] + white * 0.5329522;
+                this.b[5] = -0.7616 * this.b[5] - white * 0.0168980;
+                const pink = this.b[0] + this.b[1] + this.b[2] + this.b[3] + this.b[4] + this.b[5] + this.b[6] + white * 0.5362;
+                this.b[6] = white * 0.115926;
+                return pink * 0.12;
+            }
+        }
+        const pinkNoiseLFO = new PinkNoiseGenerator();
+
+        // --- Audio Context & Dynamic Spectrum Variables ---
+        let audioCtx = null;
+        let masterGain = null;
+        let masterCompressor = null;
+        let dryGain = null;
+        let analyserNode = null;
+        let audioDataArray = null;
+
+        // Reverb Nodes
+        let convolverNode = null;
+        let reverbSendGain = null;
+        let reverbReturnGain = null;
+
+        // Delay Nodes
+        let delayNode = null;
+        let delayFeedbackGain = null;
+        let delaySendGain = null;
+        let delayReturnGain = null;
+
+        let isAudioInit = false;
+        let lastTriggerTime = 0;
+        let currentPeriodicWave = null;
+
+        const voicePool = [];
+        const fishes = [];
+        let waterMesh, tankMesh, waterGeometry;
+        
+        // 64 Floor Ripples & Neon Dynamic Point Lights
+        const spectrumRipples = [];
+        let spectrumLightLow = null;
+        let spectrumLightMidL = null;
+        let spectrumLightMidH = null;
+        let spectrumLightHigh = null;
+
+        const gridN = CONFIG.gridSize;
+        let heightMap = new Float32Array(gridN * gridN);
+        let prevHeightMap = new Float32Array(gridN * gridN);
+
+        let scene, camera, renderer, raycaster, mouse, controls;
+        let targetCamPos = null;
+        let targetCamLookAt = null;
+
+        // Pointer Press Timing State for Dynamic Force
+        let pointerDownTime = 0;
+        let pointerDownPos = { x: 0, y: 0 };
+
+        // Randomizer State
+        let randomTimerId = null;
+        let randomCycleSeconds = 10.1;
+
+        // --- Dynamic Reverb Impulse Buffer Generator ---
+        function createHallReverbBuffer(ctx, duration = 2.5) {
+            const sampleRate = ctx.sampleRate;
+            const length = Math.floor(sampleRate * duration);
+            const impulse = ctx.createBuffer(2, length, sampleRate);
+            const left = impulse.getChannelData(0);
+            const right = impulse.getChannelData(1);
+
+            for (let i = 0; i < length; i++) {
+                const t = i / sampleRate;
+                const envelope = Math.exp(-t * (6.0 / duration));
+                left[i] = (Math.random() * 2 - 1) * envelope;
+                right[i] = (Math.random() * 2 - 1) * envelope;
+            }
+            return impulse;
+        }
+
+        // --- Audio Initialization with FFT AnalyserNode ---
+        function initAudio() {
+            if (isAudioInit) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            masterCompressor = audioCtx.createDynamicsCompressor();
+            masterCompressor.threshold.setValueAtTime(-16, audioCtx.currentTime);
+            masterCompressor.knee.setValueAtTime(10, audioCtx.currentTime);
+            masterCompressor.ratio.setValueAtTime(6, audioCtx.currentTime);
+            masterCompressor.attack.setValueAtTime(0.005, audioCtx.currentTime);
+            masterCompressor.release.setValueAtTime(0.15, audioCtx.currentTime);
+
+            // Analyser Node (FFT Size 2048 = 1024 bins for precise 40Hz-2600Hz extraction)
+            analyserNode = audioCtx.createAnalyser();
+            analyserNode.fftSize = 2048;
+            audioDataArray = new Uint8Array(analyserNode.frequencyBinCount);
+
+            dryGain = audioCtx.createGain();
+            dryGain.gain.setValueAtTime(0.70, audioCtx.currentTime);
+            masterCompressor.connect(dryGain);
+
+            // Reverb FX
+            convolverNode = audioCtx.createConvolver();
+            const revTimeVal = parseFloat(document.getElementById('slider-rev-time').value);
+            convolverNode.buffer = createHallReverbBuffer(audioCtx, revTimeVal);
+
+            reverbSendGain = audioCtx.createGain();
+            reverbReturnGain = audioCtx.createGain();
+
+            const revSendVal = parseInt(document.getElementById('slider-rev-send').value) / 100.0;
+            reverbSendGain.gain.setValueAtTime(revSendVal, audioCtx.currentTime);
+            reverbReturnGain.gain.setValueAtTime(0.60, audioCtx.currentTime);
+
+            masterCompressor.connect(reverbSendGain);
+            reverbSendGain.connect(convolverNode);
+            convolverNode.connect(reverbReturnGain);
+
+            // Delay FX
+            delayNode = audioCtx.createDelay(3.0);
+            const delayTimeVal = parseFloat(document.getElementById('slider-delay-time').value);
+            delayNode.delayTime.setValueAtTime(delayTimeVal, audioCtx.currentTime);
+
+            delayFeedbackGain = audioCtx.createGain();
+            delayFeedbackGain.gain.setValueAtTime(0.40, audioCtx.currentTime);
+
+            const delayFilter = audioCtx.createBiquadFilter();
+            delayFilter.type = 'lowpass';
+            delayFilter.frequency.setValueAtTime(2400, audioCtx.currentTime);
+
+            delaySendGain = audioCtx.createGain();
+            delayReturnGain = audioCtx.createGain();
+
+            const delaySendVal = parseInt(document.getElementById('slider-delay-send').value) / 100.0;
+            delaySendGain.gain.setValueAtTime(delaySendVal, audioCtx.currentTime);
+            delayReturnGain.gain.setValueAtTime(0.60, audioCtx.currentTime);
+
+            masterCompressor.connect(delaySendGain);
+            delaySendGain.connect(delayNode);
+            delayNode.connect(delayFilter);
+            delayFilter.connect(delayFeedbackGain);
+            delayFeedbackGain.connect(delayNode);
+            delayFilter.connect(delayReturnGain);
+
+            // Master Gain
+            masterGain = audioCtx.createGain();
+            const initVol = parseInt(document.getElementById('slider-vol').value) / 100.0;
+            masterGain.gain.setValueAtTime(initVol, audioCtx.currentTime);
+
+            dryGain.connect(masterGain);
+            reverbReturnGain.connect(masterGain);
+            delayReturnGain.connect(masterGain);
+
+            masterGain.connect(analyserNode);
+            analyserNode.connect(audioCtx.destination);
+
+            // Voice Pool (64 Voices)
+            for (let i = 0; i < CONFIG.maxPolyphony; i++) {
+                voicePool.push(new Voice(audioCtx, masterCompressor));
+            }
+
+            isAudioInit = true;
+            document.getElementById('btn-audio-start').innerText = '🔊 オーディオ有効化済み';
+            document.getElementById('btn-audio-start').classList.add('text-emerald-400');
+        }
+
+        function ensureAudioContext() {
+            if (!isAudioInit) initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- Polyphonic Voice Class ---
+        class Voice {
+            constructor(ctx, destination) {
+                this.ctx = ctx;
+                this.destination = destination;
+                this.active = false;
+                this.noteFreq = 0;
+                this.startTime = 0;
+                this.osc = null;
+                this.subOsc = null;
+
+                this.filter = ctx.createBiquadFilter();
+                this.filter.type = 'lowpass';
+                this.filter.Q.value = 1.0;
+
+                this.gain = ctx.createGain();
+                this.gain.gain.setValueAtTime(0.0, ctx.currentTime);
+
+                this.filter.connect(this.gain);
+                this.gain.connect(destination);
+            }
+
+            play(freq) {
+                const now = this.ctx.currentTime;
+                
+                if (this.osc) {
+                    try { this.osc.stop(); } catch(e){}
+                }
+                if (this.subOsc) {
+                    try { this.subOsc.stop(); } catch(e){}
+                }
+
+                this.active = true;
+                this.noteFreq = freq;
+                this.startTime = now;
+
+                this.osc = this.ctx.createOscillator();
+                if (currentPeriodicWave) {
+                    this.osc.setPeriodicWave(currentPeriodicWave);
+                } else {
+                    this.osc.type = 'sawtooth';
+                }
+                this.osc.frequency.setValueAtTime(freq, now);
+
+                this.subOsc = this.ctx.createOscillator();
+                this.subOsc.type = 'triangle';
+                this.subOsc.frequency.setValueAtTime(freq * 0.5, now);
+
+                this.osc.connect(this.filter);
+                this.subOsc.connect(this.filter);
+
+                this.osc.start(now);
+                this.subOsc.start(now);
+
+                setTimeout(() => {
+                    if (this.active && this.ctx.currentTime - this.startTime >= 3.8) {
+                        this.stop();
+                    }
+                }, 4000);
+            }
+
+            updateVCA(waterAmp, now) {
+                if (!this.active) return;
+
+                const pinkVal = pinkNoiseLFO.next();
+                const BASE_CUTOFF = 130;
+                
+                const modCutoff = Math.min(Math.max(BASE_CUTOFF + waterAmp * 180 + pinkVal * 120, 80), 2500);
+                this.filter.frequency.setTargetAtTime(modCutoff, now, 0.03);
+
+                const targetGain = Math.min(waterAmp * 0.35 + Math.abs(pinkVal) * 0.03, 0.55);
+                this.gain.gain.setTargetAtTime(targetGain, now, 0.03);
+            }
+
+            stop() {
+                if (!this.active) return;
+                this.active = false;
+                const now = this.ctx ? this.ctx.currentTime : 0;
+                if (this.gain && now) {
+                    this.gain.gain.setTargetAtTime(0.0, now, 0.05);
+                }
+                setTimeout(() => {
+                    try { if (this.osc) this.osc.stop(); } catch(e){}
+                    try { if (this.subOsc) this.subOsc.stop(); } catch(e){}
+                }, 100);
+            }
+        }
+
+        function triggerVoice(freq) {
+            if (!isAudioInit || !audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            if (now - lastTriggerTime < CONFIG.minTriggerInterval) {
+                return;
+            }
+            lastTriggerTime = now;
+
+            let voice = voicePool.find(v => !v.active);
+            if (!voice) {
+                voice = voicePool.reduce((oldest, v) => (v.startTime < oldest.startTime ? v : oldest), voicePool[0]);
+            }
+
+            voice.play(freq);
+        }
+
+        function getRandomScaleNote() {
+            const index = Math.floor(Math.random() * (SCALE_NOTES.length - 4)) + 3; 
+            return SCALE_NOTES[Math.min(index, SCALE_NOTES.length - 1)];
+        }
+
+        // --- Procedural 3D Goldfish Mesh ---
+        function createGoldfishMesh(hue, sizeMultiplier) {
+            const group = new THREE.Group();
+            const color = new THREE.Color().setHSL(hue / 360, 0.9, 0.5);
+
+            const fishMat = new THREE.MeshPhongMaterial({
+                color: color,
+                shininess: 90,
+                transparent: true,
+                opacity: 0.95,
+                side: THREE.DoubleSide
+            });
+
+            const s = CONFIG.baseFishScale * sizeMultiplier;
+
+            // Body
+            const bodyGeo = new THREE.SphereGeometry(s * 1.0, 16, 12);
+            bodyGeo.scale(1.0, 1.2, 2.0);
+            const body = new THREE.Mesh(bodyGeo, fishMat);
+            group.add(body);
+
+            // Tail
+            const tailGeo = new THREE.ConeGeometry(s * 1.2, s * 2.2, 3);
+            tailGeo.rotateX(Math.PI / 2);
+            const tail = new THREE.Mesh(tailGeo, fishMat);
+            tail.position.set(0, 0, -s * 2.0);
+            tail.name = 'tail';
+            group.add(tail);
+
+            // Fins
+            const finGeo = new THREE.ConeGeometry(s * 0.5, s * 1.2, 3);
+            finGeo.rotateZ(Math.PI / 3);
+            const finL = new THREE.Mesh(finGeo, fishMat);
+            finL.position.set(s * 0.8, -s * 0.2, s * 0.2);
+            finL.name = 'finL';
+            group.add(finL);
+
+            const finR = new THREE.Mesh(finGeo, fishMat);
+            finR.position.set(-s * 0.8, -s * 0.2, s * 0.2);
+            finR.rotation.y = Math.PI;
+            finR.name = 'finR';
+            group.add(finR);
+
+            // Eyes
+            const eyeGeo = new THREE.SphereGeometry(s * 0.25, 8, 8);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+            [-1, 1].forEach(side => {
+                const eye = new THREE.Mesh(eyeGeo, eyeMat);
+                eye.position.set(side * s * 0.75, s * 0.4, s * 1.0);
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(s * 0.12, 8, 8), pupilMat);
+                pupil.position.set(side * s * 0.85, s * 0.4, s * 1.15);
+                group.add(eye);
+                group.add(pupil);
+            });
+
+            group.castShadow = true;
+            return group;
+        }
+
+        // --- Goldfish Class ---
+        class Goldfish {
+            constructor(hue, sizeMult) {
+                this.hue = hue;
+                this.sizeMult = sizeMult;
+                this.mesh = createGoldfishMesh(hue, sizeMult);
+                
+                this.pos = new THREE.Vector3(
+                    (Math.random() - 0.5) * 6,
+                    -1.0 - Math.random() * 2.5,
+                    (Math.random() - 0.5) * 6
+                );
+                this.mesh.position.copy(this.pos);
+
+                this.velocity = new THREE.Vector3();
+                this.target = new THREE.Vector3();
+                this.getNewTarget();
+
+                let panicFactor = Math.min(Math.max(hue / 240, 0), 1);
+                if (hue > 240) panicFactor = Math.random();
+
+                this.baseSpeed = (0.02 / sizeMult);
+                this.panicMultiplier = 1.0;
+                this.maxPanic = 2.5 + panicFactor * 4.5;
+                this.recoveryDuration = 3.0 + panicFactor * 3.0;
+                this.swimTime = Math.random() * 100;
+            }
+
+            getNewTarget() {
+                this.target.set(
+                    (Math.random() - 0.5) * (CONFIG.waterSize - 2),
+                    -0.8 - Math.random() * 2.8,
+                    (Math.random() - 0.5) * (CONFIG.waterSize - 2)
+                );
+            }
+
+            triggerPanic(intensity = 1.0) {
+                // intensity: 1.0 (短タップ強打) 〜 0.15 (長押し優しくタッチ)
+                const effectivePanic = 1.0 + (this.maxPanic - 1.0) * intensity;
+                this.panicMultiplier = Math.max(this.panicMultiplier, effectivePanic);
+                if (intensity > 0.35) {
+                    this.getNewTarget();
+                }
+            }
+
+            update(delta, currentWaterAmp) {
+                if (this.panicMultiplier > 1.0) {
+                    const decay = (delta / this.recoveryDuration) * (this.maxPanic - 1.0);
+                    this.panicMultiplier = Math.max(1.0, this.panicMultiplier - decay);
+                }
+
+                const currentSpeed = this.baseSpeed * this.panicMultiplier;
+
+                const dir = new THREE.Vector3().subVectors(this.target, this.pos);
+                if (dir.length() < 0.5) {
+                    this.getNewTarget();
+                } else {
+                    dir.normalize();
+                    this.velocity.lerp(dir.multiplyScalar(currentSpeed), 0.05);
+                    this.pos.add(this.velocity);
+                    this.mesh.position.copy(this.pos);
+
+                    if (this.velocity.lengthSq() > 0.000001) {
+                        const lookTarget = this.pos.clone().add(this.velocity);
+                        this.mesh.lookAt(lookTarget);
+                    }
+                }
+
+                this.swimTime += delta * 6.0 * (this.panicMultiplier * 0.8);
+                const tail = this.mesh.getObjectByName('tail');
+                if (tail) tail.rotation.y = Math.sin(this.swimTime) * 0.4;
+
+                const finL = this.mesh.getObjectByName('finL');
+                const finR = this.mesh.getObjectByName('finR');
+                if (finL) finL.rotation.z = Math.PI / 3 + Math.cos(this.swimTime) * 0.2;
+                if (finR) finR.rotation.z = -Math.PI / 3 - Math.cos(this.swimTime) * 0.2;
+
+                const gx = Math.floor(((this.pos.x + CONFIG.waterSize/2) / CONFIG.waterSize) * gridN);
+                const gz = Math.floor(((this.pos.z + CONFIG.waterSize/2) / CONFIG.waterSize) * gridN);
+
+                if (gx >= 1 && gx < gridN - 1 && gz >= 1 && gz < gridN - 1) {
+                    const depthFactor = Math.max(0.15, (this.pos.y + 4.0) / 4.0);
+                    const sizeEffect = Math.pow(this.sizeMult, 3.0);
+                    
+                    const baseForce = 0.012 * sizeEffect * depthFactor * this.panicMultiplier;
+                    const rippleRadius = Math.max(1, Math.round(this.sizeMult * 1.5));
+
+                    for (let dz = -rippleRadius; dz <= rippleRadius; dz++) {
+                        for (let dx = -rippleRadius; dx <= rippleRadius; dx++) {
+                            const rx = gx + dx;
+                            const rz = gz + dz;
+                            if (rx >= 1 && rx < gridN - 1 && rz >= 1 && rz < gridN - 1) {
+                                const dist = Math.hypot(dx, dz);
+                                if (dist <= rippleRadius) {
+                                    const falloff = (1 - dist / (rippleRadius + 0.5));
+                                    const idx = rz * gridN + rx;
+                                    heightMap[idx] += baseForce * falloff;
+                                }
+                            }
+                        }
+                    }
+
+                    if (baseForce > 0.018 && Math.random() < 0.03) {
+                        const scaleNote = getRandomScaleNote();
+                        triggerVoice(scaleNote.freq);
+                    }
+                }
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+            }
+        }
+
+        // --- 64Band Glowing Spectrum Floor Ripples (真円の波紋) & Light Sources ---
+        function initFloorSpectrumRipples() {
+            const group = new THREE.Group();
+            group.name = 'floorSpectrumRipples';
+            
+            const cols = 8;
+            const rows = 8;
+            const floorY = -5.38;
+            const spanX = CONFIG.waterSize * 0.78;
+            const spanZ = CONFIG.waterSize * 0.78;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const idx = r * cols + c;
+                    const x = -spanX / 2 + (c / (cols - 1)) * spanX;
+                    const z = -spanZ / 2 + (r / (rows - 1)) * spanZ;
+                    
+                    const hue = 0.5 + (idx / 63.0) * 0.45;
+                    const baseColor = new THREE.Color().setHSL(hue, 1.0, 0.6);
+
+                    // 1. Center Glowing Core Disc (真円)
+                    const coreGeo = new THREE.CircleGeometry(0.08, 24);
+                    coreGeo.rotateX(-Math.PI / 2); // Rotate geometry once into X-Z plane
+                    const coreMat = new THREE.MeshBasicMaterial({
+                        color: baseColor,
+                        transparent: true,
+                        opacity: 0.8,
+                        depthWrite: false,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+                    coreMesh.position.set(x, floorY, z);
+
+                    // 2. Main Spectrum Ripple Ring (真円)
+                    const ringGeo = new THREE.RingGeometry(0.06, 0.40, 32);
+                    ringGeo.rotateX(-Math.PI / 2);
+                    const ringMat = new THREE.MeshBasicMaterial({
+                        color: baseColor,
+                        transparent: true,
+                        opacity: 0.8,
+                        depthWrite: false,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                    ringMesh.position.set(x, floorY, z);
+
+                    // 3. Outer Wave Expansion Ring (点から拡がる真円の波紋)
+                    const waveGeo = new THREE.RingGeometry(0.04, 0.12, 32);
+                    waveGeo.rotateX(-Math.PI / 2);
+                    const waveMat = new THREE.MeshBasicMaterial({
+                        color: baseColor,
+                        transparent: true,
+                        opacity: 0.5,
+                        depthWrite: false,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const waveMesh = new THREE.Mesh(waveGeo, waveMat);
+                    waveMesh.position.set(x, floorY, z);
+
+                    group.add(coreMesh);
+                    group.add(ringMesh);
+                    group.add(waveMesh);
+
+                    spectrumRipples.push({
+                        idx: idx,
+                        x: x,
+                        z: z,
+                        baseColor: baseColor,
+                        coreMesh: coreMesh,
+                        ringMesh: ringMesh,
+                        waveMesh: waveMesh,
+                        wavePhase: Math.random()
+                    });
+                }
+            }
+
+            scene.add(group);
+
+            // 金魚を下方から照らし出す 4基のネオンポイントライト
+            spectrumLightLow = new THREE.PointLight(0x06b6d4, 0, 15);
+            spectrumLightLow.position.set(-2.5, floorY + 0.5, -2.5);
+            scene.add(spectrumLightLow);
+
+            spectrumLightMidL = new THREE.PointLight(0xa855f7, 0, 15);
+            spectrumLightMidL.position.set(2.5, floorY + 0.5, -2.5);
+            scene.add(spectrumLightMidL);
+
+            spectrumLightMidH = new THREE.PointLight(0xec4899, 0, 15);
+            spectrumLightMidH.position.set(-2.5, floorY + 0.5, 2.5);
+            scene.add(spectrumLightMidH);
+
+            spectrumLightHigh = new THREE.PointLight(0xeab308, 0, 15);
+            spectrumLightHigh.position.set(2.5, floorY + 0.5, 2.5);
+            scene.add(spectrumLightHigh);
+        }
+
+        // --- 40Hz 〜 2600Hz 厳密抽出 Logarithmic Equalized 64 Band Spectrum Sampler ---
+        function getLog64Bands() {
+            if (!analyserNode || !audioDataArray || !audioCtx) return new Float32Array(64);
+            analyserNode.getByteFrequencyData(audioDataArray);
+
+            const bandValues = new Float32Array(64);
+            const totalBins = analyserNode.frequencyBinCount; // 1024 bins
+            const nyquist = audioCtx.sampleRate / 2.0;
+
+            const minFreq = 40;
+            const maxFreq = 2600;
+
+            const minBin = Math.max(0, Math.floor((minFreq / nyquist) * totalBins));
+            const maxBin = Math.min(totalBins - 1, Math.ceil((maxFreq / nyquist) * totalBins));
+
+            for (let i = 0; i < 64; i++) {
+                // 40Hz ~ 2600Hz 領域を対数スケーリングで64バンドに均等マッピング
+                const startNorm = Math.pow(i / 64.0, 1.8);
+                const endNorm = Math.pow((i + 1) / 64.0, 1.8);
+
+                const startBin = Math.min(maxBin, minBin + Math.floor(startNorm * (maxBin - minBin)));
+                const endBin = Math.min(maxBin, Math.max(startBin + 1, minBin + Math.floor(endNorm * (maxBin - minBin))));
+
+                let sum = 0;
+                let count = 0;
+                for (let b = startBin; b < endBin; b++) {
+                    sum += audioDataArray[b];
+                    count++;
+                }
+
+                let val = count > 0 ? (sum / count) / 255.0 : 0;
+                const eqBoost = 1.0 + (i / 64.0) * 1.4;
+                bandValues[i] = Math.min(1.0, val * eqBoost);
+            }
+            return bandValues;
+        }
+
+        // --- Update Floor Spectrum Ripples & Light Glow (真円拡充) ---
+        function updateFloorSpectrumRipples(delta) {
+            if (!spectrumRipples || spectrumRipples.length === 0) return;
+
+            const bands = getLog64Bands();
+
+            let sumLow = 0, sumMidL = 0, sumMidH = 0, sumHigh = 0;
+
+            for (let i = 0; i < 64; i++) {
+                const item = spectrumRipples[i];
+                const amp = bands[i]; // 0.0 ~ 1.0
+
+                // 各軸均等スケールで真円（Perfect Circle）を維持
+                const scaleVal = 0.2 + amp * 2.8;
+                item.ringMesh.scale.set(scaleVal, scaleVal, scaleVal);
+                item.coreMesh.scale.set(0.3 + amp * 1.5, 0.3 + amp * 1.5, 0.3 + amp * 1.5);
+
+                const alpha = 0.15 + amp * 0.85;
+                item.ringMesh.material.opacity = alpha;
+                item.coreMesh.material.opacity = Math.min(1.0, alpha * 1.2);
+
+                // 点から真円に波紋が外へ広がるアニメーション
+                item.wavePhase = (item.wavePhase + delta * (0.8 + amp * 2.2)) % 1.0;
+                const waveScale = scaleVal * (0.2 + item.wavePhase * 1.3);
+                const waveAlpha = (1.0 - item.wavePhase) * alpha * 0.75;
+                item.waveMesh.scale.set(waveScale, waveScale, waveScale);
+                item.waveMesh.material.opacity = waveAlpha;
+
+                if (i < 16) sumLow += amp;
+                else if (i < 32) sumMidL += amp;
+                else if (i < 48) sumMidH += amp;
+                else sumHigh += amp;
+            }
+
+            if (spectrumLightLow) spectrumLightLow.intensity = Math.pow(sumLow / 16, 1.2) * 8.0 + 0.3;
+            if (spectrumLightMidL) spectrumLightMidL.intensity = Math.pow(sumMidL / 16, 1.2) * 8.0 + 0.3;
+            if (spectrumLightMidH) spectrumLightMidH.intensity = Math.pow(sumMidH / 16, 1.2) * 8.0 + 0.3;
+            if (spectrumLightHigh) spectrumLightHigh.intensity = Math.pow(sumHigh / 16, 1.2) * 8.0 + 0.3;
+        }
+
+        // --- 3D Scene Initialization ---
+        function initScene() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050811);
+            scene.fog = new THREE.FogExp2(0x050811, 0.04);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 3.2, 12);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.target.set(0, -1.0, 0);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            const ambientLight = new THREE.AmbientLight(0x38bdf8, 1.8);
+            scene.add(ambientLight);
+
+            const sunLight = new THREE.DirectionalLight(0xffffff, 2.2);
+            sunLight.position.set(5, 12, 5);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            // Tank Outer Glass
+            const tankGeo = new THREE.BoxGeometry(CONFIG.waterSize, 6, CONFIG.waterSize);
+            const tankMat = new THREE.MeshPhongMaterial({
+                color: 0x0f172a,
+                transparent: true,
+                opacity: 0.18,
+                depthWrite: false,
+                side: THREE.BackSide
+            });
+            tankMesh = new THREE.Mesh(tankGeo, tankMat);
+            tankMesh.position.set(0, -2.5, 0);
+            scene.add(tankMesh);
+
+            // Water Mesh
+            waterGeometry = new THREE.PlaneGeometry(
+                CONFIG.waterSize, CONFIG.waterSize, 
+                gridN - 1, gridN - 1
+            );
+            waterGeometry.rotateX(-Math.PI / 2);
+
+            const waterMaterial = new THREE.MeshPhongMaterial({
+                color: 0x0284c7,
+                emissive: 0x0369a1,
+                specular: 0xbae6fd,
+                shininess: 90,
+                wireframe: false,
+                transparent: true,
+                opacity: 0.15,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            waterMesh = new THREE.Mesh(waterGeometry, waterMaterial);
+            waterMesh.position.set(0, 0, 0);
+            scene.add(waterMesh);
+
+            // 床面64Band真円波紋スペクトラム生成
+            initFloorSpectrumRipples();
+
+            // 初期金魚生成
+            randomizeAllGoldfish();
+
+            window.addEventListener('resize', onWindowResize);
+
+            // タップ（クリック）時間計測による打撃強度計算イベント
+            renderer.domElement.addEventListener('pointerdown', (e) => {
+                pointerDownTime = performance.now();
+                pointerDownPos.x = e.clientX;
+                pointerDownPos.y = e.clientY;
+            });
+
+            renderer.domElement.addEventListener('pointerup', (e) => {
+                const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+                if (dist < 8) {
+                    const holdDuration = (performance.now() - pointerDownTime) / 1000; // 秒数
+                    
+                    // タップ時間が短ければ強い打撃(1.0)、長押しであれば優しいタッチ(0.15)
+                    const minDur = 0.08; // 80ms以下で最大強度
+                    const maxDur = 0.75; // 750ms以上で最小強度
+                    const t = Math.min(Math.max((holdDuration - minDur) / (maxDur - minDur), 0), 1);
+                    const forceFactor = 1.0 - t * 0.85; // 1.0 (強) 〜 0.15 (弱)
+
+                    onTankTap(e, forceFactor);
+                }
+            });
+
+            setupCameraControls();
+            setupWindowToggleHandlers();
+        }
+
+        // --- UI Windows Toggle (小さくする/展開) Event Handlers ---
+        function setupWindowToggleHandlers() {
+            const btnToggleGuide = document.getElementById('btn-toggle-guide');
+            const guideContent = document.getElementById('panel-guide-content');
+            const guideToggleIcon = document.getElementById('guide-toggle-icon');
+            const guideToggleText = document.getElementById('guide-toggle-text');
+
+            btnToggleGuide.addEventListener('click', () => {
+                if (guideContent.classList.contains('hidden')) {
+                    guideContent.classList.remove('hidden');
+                    guideToggleIcon.innerText = '−';
+                    guideToggleText.innerText = '小さくする';
+                } else {
+                    guideContent.classList.add('hidden');
+                    guideToggleIcon.innerText = '＋';
+                    guideToggleText.innerText = '展開';
+                }
+            });
+
+            const btnToggleSettings = document.getElementById('btn-toggle-settings');
+            const settingsContent = document.getElementById('panel-settings-content');
+            const settingsToggleIcon = document.getElementById('settings-toggle-icon');
+            const settingsToggleText = document.getElementById('settings-toggle-text');
+
+            btnToggleSettings.addEventListener('click', () => {
+                if (settingsContent.classList.contains('hidden')) {
+                    settingsContent.classList.remove('hidden');
+                    settingsToggleIcon.innerText = '−';
+                    settingsToggleText.innerText = '小さくする';
+                } else {
+                    settingsContent.classList.add('hidden');
+                    settingsToggleIcon.innerText = '＋';
+                    settingsToggleText.innerText = '展開';
+                }
+            });
+        }
+
+        // --- Camera Control Helpers ---
+        function setCameraPreset(pos, targetLookAt) {
+            targetCamPos = pos.clone();
+            targetCamLookAt = targetLookAt.clone();
+            controls.autoRotate = false;
+            document.getElementById('btn-cam-rotate').classList.remove('bg-cyan-500/30', 'text-cyan-300', 'border-cyan-400');
+        }
+
+        function setupCameraControls() {
+            document.getElementById('btn-cam-default').addEventListener('click', () => {
+                setCameraPreset(new THREE.Vector3(0, 3.2, 12), new THREE.Vector3(0, -1.0, 0));
+            });
+
+            document.getElementById('btn-cam-side').addEventListener('click', () => {
+                setCameraPreset(new THREE.Vector3(0, 0.05, 14), new THREE.Vector3(0, 0, 0));
+            });
+
+            document.getElementById('btn-cam-top').addEventListener('click', () => {
+                setCameraPreset(new THREE.Vector3(0, 14, 0.001), new THREE.Vector3(0, 0, 0));
+            });
+
+            const btnRotate = document.getElementById('btn-cam-rotate');
+            btnRotate.addEventListener('click', () => {
+                controls.autoRotate = !controls.autoRotate;
+                controls.autoRotateSpeed = 1.2;
+                targetCamPos = null;
+                targetCamLookAt = null;
+
+                if (controls.autoRotate) {
+                    btnRotate.classList.add('bg-cyan-500/30', 'text-cyan-300', 'border-cyan-400');
+                } else {
+                    btnRotate.classList.remove('bg-cyan-500/30', 'text-cyan-300', 'border-cyan-400');
+                }
+            });
+        }
+
+        // --- Water Physics & 1/f Spectrum Wavetable ---
+        let currentWaterAmplitude = 0;
+
+        function updateWaterPhysics() {
+            for (let z = 0; z < gridN; z++) {
+                const zM1 = z > 0 ? z - 1 : 1;
+                const zP1 = z < gridN - 1 ? z + 1 : gridN - 2;
+
+                for (let x = 0; x < gridN; x++) {
+                    const xM1 = x > 0 ? x - 1 : 1;
+                    const xP1 = x < gridN - 1 ? x + 1 : gridN - 2;
+
+                    const idx = z * gridN + x;
+                    const val = (
+                        heightMap[z * gridN + xM1] +
+                        heightMap[z * gridN + xP1] +
+                        heightMap[zM1 * gridN + x] +
+                        heightMap[zP1 * gridN + x]
+                    ) / 2.0 - prevHeightMap[idx];
+
+                    prevHeightMap[idx] = val * CONFIG.damping;
+                }
+            }
+
+            const temp = heightMap;
+            heightMap = prevHeightMap;
+            prevHeightMap = temp;
+
+            const positions = waterGeometry.attributes.position.array;
+            let totalAmplitude = 0;
+
+            for (let i = 0; i < gridN * gridN; i++) {
+                const h = heightMap[i];
+                positions[i * 3 + 1] = Math.max(-1.0, Math.min(1.0, h * 0.63));
+                totalAmplitude += Math.abs(h);
+            }
+
+            waterGeometry.attributes.position.needsUpdate = true;
+            waterGeometry.computeVertexNormals();
+
+            currentWaterAmplitude = (totalAmplitude / (gridN * gridN)) * 32.0;
+
+            if (isAudioInit && audioCtx) {
+                const numCoeffs = 16;
+                const real = new Float32Array(numCoeffs);
+                const imag = new Float32Array(numCoeffs);
+
+                const centerZ = Math.floor(gridN / 2);
+                real[0] = 0;
+                imag[0] = 0;
+
+                for (let k = 1; k < numCoeffs; k++) {
+                    const sampleIdx = Math.floor((k / numCoeffs) * (gridN - 1));
+                    const h = heightMap[centerZ * gridN + sampleIdx];
+
+                    const oneOverF = 1.0 / k;
+                    real[k] = oneOverF * (1.0 + h * 2.2);
+                    imag[k] = (Math.sin(k) * oneOverF) * (h * 1.6);
+                }
+
+                try {
+                    currentPeriodicWave = audioCtx.createPeriodicWave(real, imag, { disableNormalization: false });
+                } catch (e) {
+                    // Fallback
+                }
+
+                const now = audioCtx.currentTime;
+                voicePool.forEach(v => {
+                    if (v.active) {
+                        v.updateVCA(currentWaterAmplitude, now);
+                    }
+                });
+            }
+        }
+
+        // --- Touch/Tap Dynamic Force Event ---
+        function onTankTap(event, forceFactor = 1.0) {
+            ensureAudioContext();
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([waterMesh, tankMesh]);
+
+            if (intersects.length > 0) {
+                const pt = intersects[0].point;
+                const gx = Math.min(Math.max(Math.floor(((pt.x + CONFIG.waterSize/2) / CONFIG.waterSize) * gridN), 0), gridN - 1);
+                const gz = Math.min(Math.max(Math.floor(((pt.z + CONFIG.waterSize/2) / CONFIG.waterSize) * gridN), 0), gridN - 1);
+
+                const radius = 3;
+                const maxForce = 0.90 * forceFactor; // 強打で大波紋、長押しで微小波紋
+
+                for (let dz = -radius; dz <= radius; dz++) {
+                    for (let dx = -radius; dx <= radius; dx++) {
+                        const x = gx + dx;
+                        const z = gz + dz;
+                        if (x >= 0 && x < gridN && z >= 0 && z < gridN) {
+                            const dist = Math.hypot(dx, dz);
+                            if (dist <= radius) {
+                                const force = (1 - dist / radius) * maxForce;
+                                heightMap[z * gridN + x] += force;
+                            }
+                        }
+                    }
+                }
+
+                // 金魚のパニック・逃走強度をタップ時間に完全同期
+                fishes.forEach(fish => fish.triggerPanic(forceFactor));
+
+                const scaleNote = getRandomScaleNote();
+                triggerVoice(scaleNote.freq);
+            }
+        }
+
+        function addGoldfish(hue, sizeMult) {
+            if (fishes.length >= CONFIG.maxFish) {
+                const oldest = fishes.shift();
+                oldest.destroy();
+            }
+
+            const fish = new Goldfish(hue, sizeMult);
+            fishes.push(fish);
+            scene.add(fish.mesh);
+
+            const gx = Math.floor(gridN / 2);
+            const gz = Math.floor(gridN / 2);
+            heightMap[gz * gridN + gx] += 1.44 * Math.pow(sizeMult, 2.0);
+
+            document.getElementById('fish-count').innerText = `${fishes.length} / ${CONFIG.maxFish} 匹`;
+        }
+
+        // --- 金魚の一括ランダム生成 ---
+        function randomizeAllGoldfish() {
+            while (fishes.length > 0) {
+                const f = fishes.pop();
+                f.destroy();
+            }
+
+            const targetCount = CONFIG.maxFish;
+            for (let i = 0; i < targetCount; i++) {
+                const randHue = Math.floor(Math.random() * 360);
+                const randSize = parseFloat((0.5 + Math.random() * 1.0).toFixed(1));
+                addGoldfish(randHue, randSize);
+            }
+        }
+
+        // --- Auto Random Interval Manager ---
+        function updateRandomCycleTimer() {
+            if (randomTimerId) {
+                clearInterval(randomTimerId);
+                randomTimerId = null;
+            }
+
+            const cycleVal = parseFloat(document.getElementById('slider-random-cycle').value);
+            const cycleTextEl = document.getElementById('random-cycle-val');
+            const btnTextEl = document.getElementById('random-btn-text');
+
+            if (cycleVal >= 10.1) {
+                randomCycleSeconds = 10.1;
+                cycleTextEl.innerText = '手動';
+                cycleTextEl.className = 'font-mono text-cyan-300 font-bold';
+                btnTextEl.innerText = '金魚を即座にランダム入れ替え';
+            } else {
+                randomCycleSeconds = cycleVal;
+                cycleTextEl.innerText = `${cycleVal.toFixed(1)}秒`;
+                cycleTextEl.className = 'font-mono text-purple-300 font-bold';
+                btnTextEl.innerText = `自動ランダム実行中 (${cycleVal.toFixed(1)}s 周期)`;
+
+                randomTimerId = setInterval(() => {
+                    randomizeAllGoldfish();
+                }, randomCycleSeconds * 1000);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Animation Loop ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            if (targetCamPos && targetCamLookAt) {
+                camera.position.lerp(targetCamPos, 0.08);
+                controls.target.lerp(targetCamLookAt, 0.08);
+                if (camera.position.distanceTo(targetCamPos) < 0.02) {
+                    camera.position.copy(targetCamPos);
+                    controls.target.copy(targetCamLookAt);
+                    targetCamPos = null;
+                    targetCamLookAt = null;
+                }
+            }
+
+            if (controls) controls.update();
+
+            updateWaterPhysics();
+            updateFloorSpectrumRipples(delta);
+            fishes.forEach(fish => fish.update(delta, currentWaterAmplitude));
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Entry Point ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initScene();
+
+            const volSlider = document.getElementById('slider-vol');
+            const volVal = document.getElementById('vol-val');
+
+            const revTimeSlider = document.getElementById('slider-rev-time');
+            const revTimeVal = document.getElementById('rev-time-val');
+            const revSendSlider = document.getElementById('slider-rev-send');
+            const revSendVal = document.getElementById('rev-send-val');
+
+            const delayTimeSlider = document.getElementById('slider-delay-time');
+            const delayTimeVal = document.getElementById('delay-time-val');
+            const delaySendSlider = document.getElementById('slider-delay-send');
+            const delaySendVal = document.getElementById('delay-send-val');
+
+            const maxFishSlider = document.getElementById('slider-max-fish');
+            const maxFishVal = document.getElementById('max-fish-val');
+
+            const randomCycleSlider = document.getElementById('slider-random-cycle');
+            const btnRandomTrigger = document.getElementById('btn-random-trigger');
+
+            const sizeSlider = document.getElementById('slider-size');
+            const hueSlider = document.getElementById('slider-hue');
+            const sizeVal = document.getElementById('size-val');
+            const colorVal = document.getElementById('color-val');
+
+            // Master Volume
+            volSlider.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                volVal.innerText = `${v}%`;
+                if (masterGain && audioCtx) {
+                    masterGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Reverb Control
+            revTimeSlider.addEventListener('input', (e) => {
+                const t = parseFloat(e.target.value);
+                revTimeVal.innerText = `${t.toFixed(1)}s`;
+                if (isAudioInit && audioCtx && convolverNode) {
+                    convolverNode.buffer = createHallReverbBuffer(audioCtx, t);
+                }
+            });
+
+            revSendSlider.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                revSendVal.innerText = `${v}%`;
+                if (reverbSendGain && audioCtx) {
+                    reverbSendGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Delay Control
+            delayTimeSlider.addEventListener('input', (e) => {
+                const t = parseFloat(e.target.value);
+                delayTimeVal.innerText = `${t.toFixed(2)}s`;
+                if (delayNode && audioCtx) {
+                    delayNode.delayTime.setTargetAtTime(t, audioCtx.currentTime, 0.03);
+                }
+            });
+
+            delaySendSlider.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                delaySendVal.innerText = `${v}%`;
+                if (delaySendGain && audioCtx) {
+                    delaySendGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Goldfish Max Count Limit Slider (1 ~ 5)
+            maxFishSlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                CONFIG.maxFish = val;
+                maxFishVal.innerText = `${val} 匹`;
+
+                while (fishes.length > CONFIG.maxFish) {
+                    const oldest = fishes.shift();
+                    oldest.destroy();
+                }
+
+                document.getElementById('fish-count').innerText = `${fishes.length} / ${CONFIG.maxFish} 匹`;
+            });
+
+            // Random Cycle Slider (0.1s ~ 10.0s + 10.1s 手動)
+            randomCycleSlider.addEventListener('input', () => {
+                updateRandomCycleTimer();
+            });
+
+            // Random Button Trigger
+            btnRandomTrigger.addEventListener('click', () => {
+                ensureAudioContext();
+                randomizeAllGoldfish();
+            });
+
+            // Individual Goldfish Spawn
+            sizeSlider.addEventListener('input', (e) => {
+                const v = parseFloat(e.target.value);
+                if (v < 0.8) sizeVal.innerText = '小';
+                else if (v > 1.2) sizeVal.innerText = '大';
+                else sizeVal.innerText = '中';
+            });
+
+            hueSlider.addEventListener('input', (e) => {
+                const h = parseInt(e.target.value);
+                if (h < 40 || h > 320) {
+                    colorVal.innerText = '赤 (大胆)';
+                    colorVal.className = 'font-mono font-bold text-red-400';
+                } else if (h < 90) {
+                    colorVal.innerText = '黄 (普通)';
+                    colorVal.className = 'font-mono font-bold text-yellow-400';
+                } else if (h < 160) {
+                    colorVal.innerText = '緑 (慎重)';
+                    colorVal.className = 'font-mono font-bold text-emerald-400';
+                } else if (h < 260) {
+                    colorVal.innerText = '青 (臆病)';
+                    colorVal.className = 'font-mono font-bold text-cyan-400';
+                } else {
+                    colorVal.innerText = '紫 (気まぐれ)';
+                    colorVal.className = 'font-mono font-bold text-purple-400';
+                }
+            });
+
+            document.getElementById('btn-spawn').addEventListener('click', () => {
+                ensureAudioContext();
+                const size = parseFloat(sizeSlider.value);
+                const hue = parseInt(hueSlider.value);
+                addGoldfish(hue, size);
+            });
+
+            document.getElementById('btn-audio-start').addEventListener('click', ensureAudioContext);
+
+            animate();
+        });
+    </script>
+</body>
+</html>
