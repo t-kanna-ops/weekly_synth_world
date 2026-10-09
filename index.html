@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Google Fonts (ゴシック体メイン: M PLUS Rounded 1c & Noto Sans JP) -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -19,9 +19,18 @@
       background: linear-gradient(135deg, #090d16 0%, #111827 40%, #1e1028 75%, #090d16 100%);
       background-attachment: fixed;
       color: #f1f5f9;
+      overflow-x: hidden;
     }
 
-    /* グラスモーフィズム（透明感のある背景） */
+    /* 背景グリッドパターン */
+    .bg-grid-pattern {
+      background-size: 36px 36px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+
+    /* グラスモーフィズムパネル */
     .glass-panel {
       background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(20px);
@@ -35,126 +44,120 @@
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+      transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
-    .glass-card:not(.coming-soon):hover,
-    .glass-card.active {
+    .glass-card:hover, .glass-card.active {
       background: rgba(255, 255, 255, 0.1);
-      border-color: rgba(56, 189, 248, 0.5);
-      transform: translateY(-6px);
+      transform: translateY(-6px) scale(1.01);
       box-shadow: 0 16px 36px rgba(56, 189, 248, 0.2);
     }
 
-    /* 背景グリッドパターン */
-    .bg-grid-pattern {
-      background-size: 36px 36px;
-      background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    /* 色系統別の動的ボーダー＆光彩（hover時） */
+    .theme-pink:hover, .theme-pink.active { border-color: rgba(244, 63, 94, 0.6); box-shadow: 0 12px 30px rgba(244, 63, 94, 0.25); }
+    .theme-cyan:hover, .theme-cyan.active { border-color: rgba(56, 189, 248, 0.6); box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25); }
+    .theme-gold:hover, .theme-gold.active { border-color: rgba(251, 191, 36, 0.6); box-shadow: 0 12px 30px rgba(251, 191, 36, 0.25); }
+    .theme-purple:hover, .theme-purple.active { border-color: rgba(168, 85, 247, 0.6); box-shadow: 0 12px 30px rgba(168, 85, 247, 0.25); }
+    .theme-emerald:hover, .theme-emerald.active { border-color: rgba(16, 185, 129, 0.6); box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25); }
+
+    /* ふわふわ浮遊アニメーション */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(3deg); }
+    }
+    .animate-float {
+      animation: floatSlow 4s ease-in-out infinite;
     }
 
-    /* 光彩シャドウ */
-    .glow-pink { box-shadow: 0 0 30px rgba(244, 63, 94, 0.45); }
-    .glow-cyan { box-shadow: 0 0 30px rgba(56, 189, 248, 0.45); }
-    .glow-gold { box-shadow: 0 0 30px rgba(251, 191, 36, 0.45); }
-
-    /* トランジション用クラス */
+    /* ヒーローフェードイン/アウト */
     .fade-content {
-      transition: opacity 0.25s ease, transform 0.25s ease;
+      transition: opacity 0.2s ease, transform 0.2s ease;
     }
     .fade-out {
       opacity: 0;
       transform: translateY(6px);
     }
 
-    /* 達磨用プレビュー表示 */
-    .dharma-circle {
-      background: radial-gradient(circle, #2a080c 0%, #100508 100%);
-      border: 2px solid #fbbf24;
-      box-shadow: 0 0 35px rgba(251, 191, 36, 0.3);
-      animation: float 6s ease-in-out infinite;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    /* 漢字・シンボル表示円 */
+    .symbol-circle {
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.4) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+      animation: floatSlow 6s ease-in-out infinite;
     }
   </style>
 </head>
 <body class="bg-grid-pattern min-h-screen flex flex-col justify-between text-slate-100">
 
   <!-- HEADER -->
-  <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-white/10">
+  <header class="glass-panel sticky top-0 z-50 px-4 sm:px-8 py-4 flex justify-between items-center border-b border-white/10">
     <a href="#" class="flex items-center space-x-3 group">
-      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-pink-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg glow-pink transition transform group-hover:rotate-6">
+      <!-- ふわふわ動くロゴアイコン -->
+      <div class="animate-float w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-pink-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg transition transform group-hover:scale-110">
         ✨
       </div>
       <div>
-        <h1 class="font-black text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-200 tracking-wider">
+        <h1 class="font-black text-lg sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-200 tracking-wider">
           たのしい、シンセカイ
         </h1>
-        <p class="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Web Synth Collection</p>
+        <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold tracking-widest uppercase">Web Synth Collection</p>
       </div>
     </a>
-    <nav class="text-xs text-slate-400 hover:text-cyan-300 transition font-bold">
-      <a href="https://github.com" target="_blank" rel="noopener" class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
-        <i class="fa-brands fa-github"></i> GitHub Repository
+    
+    <nav class="flex items-center gap-3">
+      <a href="https://github.com" target="_blank" rel="noopener" class="text-xs text-slate-300 hover:text-cyan-300 transition font-bold flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+        <i class="fa-brands fa-github"></i> <span class="hidden sm:inline">GitHub</span>
       </a>
     </nav>
   </header>
 
   <!-- MAIN CONTENT -->
-  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-10">
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-8">
 
     <!-- HERO / DYNAMIC SYNTH INTRO AREA -->
-    <section class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15">
-      <!-- Ambient Glow Balls -->
+    <section id="hero-section" class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15">
       <div class="absolute -top-24 -left-24 w-72 h-72 bg-pink-500/15 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
         
         <!-- Left: Details & Play Button -->
-        <div id="hero-text-container" class="lg:col-span-8 space-y-5 fade-content">
-          <div class="flex items-center gap-3">
-            <span id="hero-tag" class="px-3.5 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/40 text-xs font-bold tracking-wider">
-              週刊シンセ界 #1
+        <div id="hero-text-container" class="lg:col-span-8 space-y-4 fade-content">
+          <div class="flex items-center gap-3 flex-wrap">
+            <span id="hero-number" class="text-xs font-black text-cyan-400 tracking-widest uppercase bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30">
+              #--
             </span>
-            <span id="hero-number" class="text-xs font-black text-cyan-400 tracking-widest uppercase">
-              #01 SELECTED
+            <span id="hero-filename" class="text-xs font-mono text-slate-400">
+              synth.html
             </span>
           </div>
 
-          <h2 id="hero-title" class="text-3xl sm:text-5xl font-black text-white leading-tight">
-            Dharma (達磨)
+          <h2 id="hero-title" class="text-2xl sm:text-4xl font-black text-white leading-tight">
+            シンセを読み込み中...
           </h2>
 
           <p id="hero-desc" class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-2xl">
-            3Dで再現された達磨の物理挙動とシンセサイザーのパラメーターがリアルタイムでインタラクティブに連動。転倒して頭部が沈むと「怒髪天モード」が起動し、強力なビットクラッシャーエフェクトが炸裂します。
+            ディレクトリ内のWebシンセサイザーを自動検索しています。
           </p>
 
           <div class="pt-2 flex flex-wrap items-center gap-4">
-            <a id="hero-play-btn" href="dharma.html" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg glow-pink transition transform active:scale-95">
-              <span>起動する</span>
+            <a id="hero-play-btn" href="#" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg transition transform active:scale-95">
+              <span>このシンセを起動する</span>
               <i class="fa-solid fa-play text-xs"></i>
             </a>
 
             <!-- Tag Chips -->
             <div id="hero-tags" class="flex flex-wrap gap-2 text-xs font-bold text-slate-400">
-              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">Three.js</span>
-              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">Web Audio API</span>
-              <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">3D Physics</span>
             </div>
           </div>
         </div>
 
         <!-- Right: Preview Visual -->
         <div class="lg:col-span-4 flex justify-center items-center">
-          <div id="hero-visual-box" class="w-56 h-56 sm:w-64 sm:h-64 rounded-full flex items-center justify-center relative fade-content">
-            <div id="hero-visual-inner" class="dharma-circle w-full h-full rounded-full flex items-center justify-center">
-              <span id="hero-symbol" class="text-6xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">
-                法
+          <div id="hero-visual-box" class="w-44 h-44 sm:w-60 sm:h-60 rounded-full flex items-center justify-center relative fade-content">
+            <div id="hero-visual-inner" class="symbol-circle w-full h-full rounded-full flex items-center justify-center">
+              <span id="hero-symbol" class="text-5xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]">
+                🎹
               </span>
             </div>
           </div>
@@ -163,174 +166,300 @@
       </div>
     </section>
 
-    <!-- COLLECTION SECTION -->
-    <section class="space-y-6">
-      <div class="flex items-center gap-3">
-        <h3 class="text-xl font-black text-slate-100 tracking-wide flex items-center gap-2">
-          <i class="fa-solid fa-layer-group text-cyan-400 text-base"></i> 作品コレクション
-        </h3>
-        <span class="text-xs text-slate-400 font-bold">カードにマウスを乗せると上のエリアが切り替わります</span>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-        <!-- CARD 1: DHARMA -->
-        <a href="dharma.html" 
-           class="synth-card glass-card rounded-2xl p-6 flex flex-col justify-between gap-6 active"
-           data-id="dharma"
-           data-number="#01"
-           data-tag="週刊シンセ界 #1"
-           data-tag-color="pink"
-           data-title="Dharma (達磨)"
-           data-desc="3Dで再現された達磨の物理挙動とシンセサイザーのパラメーターがリアルタイムでインタラクティブに連動。転倒して頭部が沈むと「怒髪天モード」が起動し、強力なビットクラッシャーエフェクトが炸裂します。"
-           data-link="dharma.html"
-           data-symbol="法"
-           data-symbol-type="kanji"
-           data-tags="Three.js,Web Audio API,3D Physics">
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-black text-cyan-400 tracking-wider">#01</span>
-              <span class="text-2xl">🧘‍♂️</span>
-            </div>
-            <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
-              Dharma
-            </h4>
-            <p class="text-xs text-slate-300 leading-relaxed font-bold">
-              倒れて怒る達磨シンセサイザー。3D物理モーション、ウェーブテーブル合成、怒髪天ビットクラッシャー搭載。
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Three.js</span>
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Web Audio API</span>
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">3D Physics</span>
-          </div>
-        </a>
-
-        <!-- CARD 2: ROGUE-LIKE SYNTH -->
-        <a href="r_l_r_l_synth.html" 
-           class="synth-card glass-card rounded-2xl p-6 flex flex-col justify-between gap-6"
-           data-id="rogue"
-           data-number="#02"
-           data-tag="NEW / GAME SYNTH"
-           data-tag-color="cyan"
-           data-title="ローグライク・シンセ"
-           data-desc="四分音符くんとすごろくを進みながら、コード・ビート・トーン・フレーズのカードを獲得・構築するシンセRPG。王道進行ボーナスや楽曲傾向マトリクス解析を搭載！"
-           data-link="r_l_r_l_synth.html"
-           data-symbol="🎲"
-           data-symbol-type="emoji"
-           data-tags="Web Audio API,Game Synth,Music RPG">
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-black text-cyan-400 tracking-wider">#02</span>
-              <span class="text-2xl">🎲</span>
-            </div>
-            <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
-              ローグライク・シンセ
-            </h4>
-            <p class="text-xs text-slate-300 leading-relaxed font-bold">
-              四分音符くんとすごろくを進みながら、コード・ビート・トーン・フレーズのカードを獲得・構築するシンセRPG。王道進行ボーナスや楽曲傾向マトリクス解析を搭載。
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Web Audio API</span>
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Game Synth</span>
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">Music RPG</span>
-          </div>
-        </a>
-
-        <!-- CARD 3: COMING SOON -->
-        <div class="glass-card coming-soon opacity-50 rounded-2xl p-6 flex flex-col justify-between gap-6 border-dashed cursor-not-allowed">
-          <div class="space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-black text-slate-500 tracking-wider">#03</span>
-              <span class="text-2xl">✨</span>
-            </div>
-            <h4 class="text-xl font-black text-slate-400">
-              Coming Soon...
-            </h4>
-            <p class="text-xs text-slate-400 leading-relaxed font-bold">
-              次作 Web Synth プロジェクトを開発中。準備が整い次第公開されます。
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-400">Web Audio</span>
-          </div>
+    <!-- SEARCH & FILTER SECTION -->
+    <section class="space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-4 rounded-2xl">
+        <!-- Title & Counter -->
+        <div class="flex items-center gap-3">
+          <h3 class="text-lg font-black text-slate-100 tracking-wide flex items-center gap-2">
+            <i class="fa-solid fa-layer-group text-cyan-400"></i> 作品コレクション
+          </h3>
+          <span id="synth-count" class="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black">
+            0作品
+          </span>
         </div>
 
+        <!-- Keyword Search Input -->
+        <div class="relative w-full md:w-72">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+          <input type="text" id="search-input" placeholder="タイトルや機能で検索..." class="w-full pl-9 pr-4 py-2 bg-black/30 border border-white/10 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 transition">
+        </div>
+      </div>
+
+      <!-- Tag Filter Buttons -->
+      <div id="tag-filters" class="flex flex-wrap gap-2 pt-1">
+        <button class="tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-500 text-slate-950 border border-cyan-400 transition" data-tag="all">
+          すべて
+        </button>
       </div>
     </section>
+
+    <!-- SYNTH CARDS GRID -->
+    <section>
+      <div id="synth-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- JSにより動的カード挿入 -->
+      </div>
+      
+      <!-- Empty State -->
+      <div id="empty-state" class="hidden glass-panel rounded-2xl p-12 text-center text-slate-400 space-y-3">
+        <i class="fa-solid fa-compact-disc text-4xl text-slate-600"></i>
+        <p class="font-bold text-sm">該当するシンセサイザーが見つかりませんでした。</p>
+      </div>
+    </section>
+
   </main>
 
   <!-- FOOTER -->
   <footer class="glass-panel py-6 px-6 text-center text-xs text-slate-400 font-bold border-t border-white/10 mt-12">
-    <p>&copy; たのしい、シンセカイ / Web Synth World. All rights reserved.</p>
+    <p>&copy; たのしい、シンセカイ / Web Synth Collection. All rights reserved.</p>
   </footer>
 
-  <!-- DYNAMIC HOVER JS -->
+  <!-- DYNAMIC PARSER & CONTROLLER SCRIPT -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const cards = document.querySelectorAll('.synth-card');
+    // 予備リスト（サーバーのディレクトリ自動一覧表示がOFFの場合のフォールバック）
+    const DEFAULT_SYNTH_FILES = [
+      'dharma.html',
+      'r_l_r_l_synth.html'
+    ];
+
+    let synthDataStore = [];
+    let activeTag = 'all';
+    let searchQuery = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadAllSynths();
+    });
+
+    // 1. 同一ディレクトリ内のHTML検出 & Fetchパース
+    async function loadAllSynths() {
+      let fileList = [];
+
+      try {
+        // ディレクトリインデックス（./）の取得を試みる
+        const res = await fetch('./');
+        if (res.ok) {
+          const htmlText = await res.text();
+          const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+          const links = Array.from(doc.querySelectorAll('a'))
+            .map(a => a.getAttribute('href'))
+            .filter(href => href && href.endsWith('.html') && !href.startsWith('index.html') && !href.startsWith('http'));
+          
+          if (links.length > 0) {
+            fileList = [...new Set(links)];
+          }
+        }
+      } catch (e) {
+        console.warn("ディレクトリ自動検出にスキップ。フォールバックリストを使用します。", e);
+      }
+
+      // 検出できなかった場合はデフォルトリストと結合
+      if (fileList.length === 0) {
+        fileList = DEFAULT_SYNTH_FILES;
+      } else {
+        // 重複を除外してマージ
+        fileList = [...new Set([...fileList, ...DEFAULT_SYNTH_FILES])];
+      }
+
+      // 各HTMLファイルをFetchしてメタデータを解析
+      const fetchPromises = fileList.map(async (file, index) => {
+        try {
+          const response = await fetch(file);
+          if (!response.ok) return null;
+          const text = await response.text();
+          const doc = new DOMParser().parseFromString(text, 'text/html');
+
+          // メタタグの解析（フォールバック付き）
+          const getMeta = (name) => {
+            const el = doc.querySelector(`meta[name="${name}"]`);
+            return el ? el.getAttribute('content') : null;
+          };
+
+          const title = getMeta('synth-title') || doc.querySelector('title')?.textContent.split('|')[0].trim() || file;
+          const description = getMeta('synth-description') || getMeta('description') || 'Web Audio APIで作られたインタラクティブ・シンセサイザー。';
+          const tagsRaw = getMeta('synth-tags') || 'Web Audio API';
+          const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+          const color = getMeta('synth-color') || 'cyan'; // pink, cyan, gold, purple, emerald
+          const symbol = getMeta('synth-symbol') || '🎹';
+          const symbolType = getMeta('synth-symbol-type') || 'emoji'; // emoji or kanji
+          const numberStr = getMeta('synth-number') || `#${String(index + 1).padStart(2, '0')}`;
+
+          return {
+            id: file.replace('.html', ''),
+            file: file,
+            title: title,
+            description: description,
+            tags: tags,
+            color: color,
+            symbol: symbol,
+            symbolType: symbolType,
+            number: numberStr
+          };
+        } catch (err) {
+          console.error(`ファイル読み込みエラー: ${file}`, err);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(fetchPromises);
+      synthDataStore = results.filter(item => item !== null);
+
+      // UIの生成
+      buildTagFilters();
+      renderCards();
+      setupSearchAndFilters();
+
+      // 初期状態で1番目の作品をヒーローにセット
+      if (synthDataStore.length > 0) {
+        updateHero(synthDataStore[0]);
+      }
+    }
+
+    // 2. タグフィルターボタンの動的生成
+    function buildTagFilters() {
+      const tagSet = new Set();
+      synthDataStore.forEach(item => item.tags.forEach(t => tagSet.add(t)));
+
+      const container = document.getElementById('tag-filters');
+      container.innerHTML = `
+        <button class="tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-400 text-slate-950 border border-cyan-300 transition hover:scale-105" data-tag="all">
+          すべて
+        </button>
+      `;
+
+      tagSet.forEach(tag => {
+        const btn = document.createElement('button');
+        btn.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/5 text-slate-300 border border-white/10 transition hover:bg-white/15 hover:text-white hover:scale-105';
+        btn.dataset.tag = tag;
+        btn.textContent = tag;
+        container.appendChild(btn);
+      });
+    }
+
+    // 3. カードグリッドの描画
+    function renderCards() {
+      const grid = document.getElementById('synth-grid');
+      const countEl = document.getElementById('synth-count');
+      const emptyEl = document.getElementById('empty-state');
+      grid.innerHTML = '';
+
+      const filtered = synthDataStore.filter(item => {
+        const matchesTag = activeTag === 'all' || item.tags.includes(activeTag);
+        const matchesSearch = searchQuery === '' || 
+          item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesTag && matchesSearch;
+      });
+
+      countEl.textContent = `${filtered.length}作品`;
+
+      if (filtered.length === 0) {
+        emptyEl.classList.remove('hidden');
+        return;
+      } else {
+        emptyEl.classList.add('hidden');
+      }
+
+      filtered.forEach((item, idx) => {
+        const card = document.createElement('a');
+        card.href = item.file;
+        card.className = `synth-card glass-card theme-${item.color} rounded-2xl p-6 flex flex-col justify-between gap-6 relative group ${idx === 0 ? 'active' : ''}`;
+        card.dataset.id = item.id;
+
+        const tagBadges = item.tags.map(t => 
+          `<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">${t}</span>`
+        ).join('');
+
+        card.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-black text-cyan-400 tracking-wider">${item.number}</span>
+              <span class="text-2xl transform group-hover:scale-125 transition duration-300">${item.symbol}</span>
+            </div>
+            <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
+              ${item.title}
+            </h4>
+            <p class="text-xs text-slate-300 leading-relaxed font-bold line-clamp-3">
+              ${item.description}
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-1.5 pt-2 border-t border-white/5">
+            ${tagBadges}
+          </div>
+        `;
+
+        // ホバー/タップ時にヒーローエリア更新
+        const handleInteraction = (e) => {
+          document.querySelectorAll('.synth-card').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          updateHero(item);
+        };
+
+        card.addEventListener('mouseenter', handleInteraction);
+        card.addEventListener('touchstart', handleInteraction, { passive: true });
+
+        grid.appendChild(card);
+      });
+    }
+
+    // 4. HEROエリアの動的更新
+    function updateHero(item) {
       const textContainer = document.getElementById('hero-text-container');
       const visualBox = document.getElementById('hero-visual-box');
-      const visualInner = document.getElementById('hero-visual-inner');
       
-      const heroTag = document.getElementById('hero-tag');
-      const heroNumber = document.getElementById('hero-number');
-      const heroTitle = document.getElementById('hero-title');
-      const heroDesc = document.getElementById('hero-desc');
-      const heroPlayBtn = document.getElementById('hero-play-btn');
-      const heroTags = document.getElementById('hero-tags');
-      const heroSymbol = document.getElementById('hero-symbol');
+      textContainer.classList.add('fade-out');
+      visualBox.classList.add('fade-out');
 
-      cards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-          // アクティブクラスの切り替え
-          cards.forEach(c => c.classList.remove('active'));
-          card.classList.add('active');
+      setTimeout(() => {
+        document.getElementById('hero-number').textContent = `${item.number} SELECTED`;
+        document.getElementById('hero-filename').textContent = item.file;
+        document.getElementById('hero-title').textContent = item.title;
+        document.getElementById('hero-desc').textContent = item.description;
+        document.getElementById('hero-play-btn').setAttribute('href', item.file);
 
-          // フェードアウトアニメーション
-          textContainer.classList.add('fade-out');
-          visualBox.classList.add('fade-out');
+        // タグの生成
+        const tagsContainer = document.getElementById('hero-tags');
+        tagsContainer.innerHTML = item.tags.map(t => 
+          `<span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">${t}</span>`
+        ).join('');
 
-          setTimeout(() => {
-            // データ取得
-            const number = card.dataset.number;
-            const tag = card.dataset.tag;
-            const title = card.dataset.title;
-            const desc = card.dataset.desc;
-            const link = card.dataset.link;
-            const symbol = card.dataset.symbol;
-            const symbolType = card.dataset.symbolType;
-            const tags = card.dataset.tags ? card.dataset.tags.split(',') : [];
+        // シンボルエリア
+        const symbolEl = document.getElementById('hero-symbol');
+        symbolEl.textContent = item.symbol;
+        if (item.symbolType === 'kanji') {
+          symbolEl.className = 'text-6xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]';
+        } else {
+          symbolEl.className = 'text-6xl sm:text-8xl';
+        }
 
-            // HEROコンテンツ更新
-            heroNumber.textContent = `${number} SELECTED`;
-            heroTag.textContent = tag;
-            heroTitle.textContent = title;
-            heroDesc.textContent = desc;
-            heroPlayBtn.setAttribute('href', link);
+        textContainer.classList.remove('fade-out');
+        visualBox.classList.remove('fade-out');
+      }, 150);
+    }
 
-            // タグの書き換え
-            heroTags.innerHTML = tags.map(t => `<span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">${t.trim()}</span>`).join('');
+    // 5. 検索＆フィルターイベントの設定
+    function setupSearchAndFilters() {
+      // タグクリック
+      document.getElementById('tag-filters').addEventListener('click', (e) => {
+        const btn = e.target.closest('.tag-btn');
+        if (!btn) return;
 
-            // 右側ビジュアルのスタイリング切り替え
-            if (symbolType === 'kanji') {
-              visualInner.className = 'dharma-circle w-full h-full rounded-full flex items-center justify-center';
-              heroSymbol.className = 'text-6xl sm:text-7xl font-serif text-amber-300 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]';
-              heroSymbol.textContent = symbol;
-            } else {
-              visualInner.className = 'w-full h-full rounded-full flex items-center justify-center bg-gradient-to-tr from-cyan-500/20 via-pink-500/20 to-amber-400/20 border-2 border-cyan-400/40 shadow-[0_0_35px_rgba(56,189,248,0.3)] animate-bounce';
-              heroSymbol.className = 'text-7xl sm:text-8xl';
-              heroSymbol.textContent = symbol;
-            }
-
-            // フェードインアニメーション
-            textContainer.classList.remove('fade-out');
-            visualBox.classList.remove('fade-out');
-          }, 180);
+        document.querySelectorAll('.tag-btn').forEach(b => {
+          b.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/5 text-slate-300 border border-white/10 transition hover:bg-white/15 hover:text-white hover:scale-105';
         });
+        btn.className = 'tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-400 text-slate-950 border border-cyan-300 transition hover:scale-105';
+
+        activeTag = btn.dataset.tag;
+        renderCards();
       });
-    });
+
+      // キーワード検索
+      const searchInput = document.getElementById('search-input');
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim();
+        renderCards();
+      });
+    }
   </script>
 </body>
 </html>
