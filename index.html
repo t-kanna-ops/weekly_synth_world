@@ -14,53 +14,57 @@
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <style>
-    body {
+    /* 背景色を深いダークネイビー（#0b0f19）に固定し、白文字が常にくっきり見えるように設定 */
+    html, body {
+      background-color: #0b0f19 !important;
+      color: #f8fafc;
       font-family: 'M PLUS Rounded 1c', 'Noto Sans JP', sans-serif;
-      background: linear-gradient(135deg, #090d16 0%, #111827 40%, #1e1028 75%, #090d16 100%);
-      background-attachment: fixed;
-      color: #f1f5f9;
-      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 70%, #05070d 100%) fixed;
     }
 
     /* 背景グリッドパターン */
     .bg-grid-pattern {
       background-size: 36px 36px;
       background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
     }
 
     /* グラスモーフィズムパネル */
     .glass-panel {
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(15, 23, 42, 0.75);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
     }
 
     .glass-card {
-      background: rgba(255, 255, 255, 0.04);
+      background: rgba(30, 41, 59, 0.5);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     }
 
     .glass-card:hover, .glass-card.active {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(30, 41, 59, 0.85);
       transform: translateY(-6px) scale(1.01);
-      box-shadow: 0 16px 36px rgba(56, 189, 248, 0.2);
+      box-shadow: 0 16px 36px rgba(56, 189, 248, 0.25);
     }
 
-    /* 色系統別の動的ボーダー＆光彩（hover時） */
-    .theme-pink:hover, .theme-pink.active { border-color: rgba(244, 63, 94, 0.6); box-shadow: 0 12px 30px rgba(244, 63, 94, 0.25); }
-    .theme-cyan:hover, .theme-cyan.active { border-color: rgba(56, 189, 248, 0.6); box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25); }
-    .theme-gold:hover, .theme-gold.active { border-color: rgba(251, 191, 36, 0.6); box-shadow: 0 12px 30px rgba(251, 191, 36, 0.25); }
-    .theme-purple:hover, .theme-purple.active { border-color: rgba(168, 85, 247, 0.6); box-shadow: 0 12px 30px rgba(168, 85, 247, 0.25); }
-    .theme-emerald:hover, .theme-emerald.active { border-color: rgba(16, 185, 129, 0.6); box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25); }
+    /* テーマ別グラデーションボーダー */
+    .theme-pink:hover, .theme-pink.active { border-color: rgba(244, 63, 94, 0.8); box-shadow: 0 12px 30px rgba(244, 63, 94, 0.3); }
+    .theme-cyan:hover, .theme-cyan.active { border-color: rgba(56, 189, 248, 0.8); box-shadow: 0 12px 30px rgba(56, 189, 248, 0.3); }
+    .theme-gold:hover, .theme-gold.active { border-color: rgba(251, 191, 36, 0.8); box-shadow: 0 12px 30px rgba(251, 191, 36, 0.3); }
+    .theme-purple:hover, .theme-purple.active { border-color: rgba(168, 85, 247, 0.8); box-shadow: 0 12px 30px rgba(168, 85, 247, 0.3); }
+    .theme-emerald:hover, .theme-emerald.active { border-color: rgba(16, 185, 129, 0.8); box-shadow: 0 12px 30px rgba(16, 185, 129, 0.3); }
 
-    /* ふわふわ浮遊アニメーション */
+    /* 浮遊アニメーション */
     @keyframes floatSlow {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
       50% { transform: translateY(-8px) rotate(3deg); }
@@ -69,7 +73,7 @@
       animation: floatSlow 4s ease-in-out infinite;
     }
 
-    /* ヒーローフェードイン/アウト */
+    /* フェード効果 */
     .fade-content {
       transition: opacity 0.2s ease, transform 0.2s ease;
     }
@@ -78,11 +82,11 @@
       transform: translateY(6px);
     }
 
-    /* 漢字・シンボル表示円 */
+    /* シンボル表示円 */
     .symbol-circle {
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.4) 100%);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(15, 23, 42, 0.8) 100%);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
       animation: floatSlow 6s ease-in-out infinite;
     }
   </style>
@@ -92,7 +96,7 @@
   <!-- HEADER -->
   <header class="glass-panel sticky top-0 z-50 px-4 sm:px-8 py-4 flex justify-between items-center border-b border-white/10">
     <a href="#" class="flex items-center space-x-3 group">
-      <!-- ふわふわ動くロゴアイコン -->
+      <!-- 動きのあるロゴアイコン -->
       <div class="animate-float w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-400 via-pink-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg transition transform group-hover:scale-110">
         ✨
       </div>
@@ -100,59 +104,60 @@
         <h1 class="font-black text-lg sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-pink-300 to-amber-200 tracking-wider">
           たのしい、シンセカイ
         </h1>
-        <p class="text-[9px] sm:text-[10px] text-slate-400 font-bold tracking-widest uppercase">Web Synth Collection</p>
+        <p class="text-[9px] sm:text-[10px] text-cyan-400 font-bold tracking-widest uppercase">Web Synth Collection</p>
       </div>
     </a>
     
     <nav class="flex items-center gap-3">
-      <a href="https://github.com" target="_blank" rel="noopener" class="text-xs text-slate-300 hover:text-cyan-300 transition font-bold flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
-        <i class="fa-brands fa-github"></i> <span class="hidden sm:inline">GitHub</span>
-      </a>
+      <div id="detection-status" class="hidden sm:flex items-center gap-2 text-xs text-slate-400 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="detection-text">自動検出有効</span>
+      </div>
     </nav>
   </header>
 
   <!-- MAIN CONTENT -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-8">
 
-    <!-- HERO / DYNAMIC SYNTH INTRO AREA -->
+    <!-- HERO / MAIN SYNTH PREVIEW -->
     <section id="hero-section" class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15">
-      <div class="absolute -top-24 -left-24 w-72 h-72 bg-pink-500/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -top-24 -left-24 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
         
         <!-- Left: Details & Play Button -->
         <div id="hero-text-container" class="lg:col-span-8 space-y-4 fade-content">
           <div class="flex items-center gap-3 flex-wrap">
-            <span id="hero-number" class="text-xs font-black text-cyan-400 tracking-widest uppercase bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/30">
+            <span id="hero-number" class="text-xs font-black text-cyan-300 tracking-widest uppercase bg-cyan-500/20 px-3 py-1 rounded-full border border-cyan-400/40 shadow">
               #--
             </span>
-            <span id="hero-filename" class="text-xs font-mono text-slate-400">
+            <span id="hero-filename" class="text-xs font-mono text-slate-400 bg-black/40 px-2.5 py-1 rounded border border-white/5">
               synth.html
             </span>
           </div>
 
-          <h2 id="hero-title" class="text-2xl sm:text-4xl font-black text-white leading-tight">
+          <h2 id="hero-title" class="text-2xl sm:text-4xl font-black text-white leading-tight drop-shadow">
             シンセを読み込み中...
           </h2>
 
-          <p id="hero-desc" class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-2xl">
-            ディレクトリ内のWebシンセサイザーを自動検索しています。
+          <p id="hero-desc" class="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed max-w-2xl">
+            リポジトリ内のWebシンセサイザーを自動検索しています。
           </p>
 
           <div class="pt-2 flex flex-wrap items-center gap-4">
-            <a id="hero-play-btn" href="#" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg transition transform active:scale-95">
+            <a id="hero-play-btn" href="#" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 hover:from-pink-400 hover:to-amber-300 text-slate-950 font-black text-sm flex items-center gap-2.5 shadow-lg shadow-pink-500/25 transition transform active:scale-95 hover:scale-105">
               <span>このシンセを起動する</span>
               <i class="fa-solid fa-play text-xs"></i>
             </a>
 
             <!-- Tag Chips -->
-            <div id="hero-tags" class="flex flex-wrap gap-2 text-xs font-bold text-slate-400">
+            <div id="hero-tags" class="flex flex-wrap gap-2 text-xs font-bold text-slate-300">
             </div>
           </div>
         </div>
 
-        <!-- Right: Preview Visual -->
+        <!-- Right: Visual Icon -->
         <div class="lg:col-span-4 flex justify-center items-center">
           <div id="hero-visual-box" class="w-44 h-44 sm:w-60 sm:h-60 rounded-full flex items-center justify-center relative fade-content">
             <div id="hero-visual-inner" class="symbol-circle w-full h-full rounded-full flex items-center justify-center">
@@ -168,13 +173,13 @@
 
     <!-- SEARCH & FILTER SECTION -->
     <section class="space-y-4">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-4 rounded-2xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-panel p-4 rounded-2xl border border-white/10">
         <!-- Title & Counter -->
         <div class="flex items-center gap-3">
           <h3 class="text-lg font-black text-slate-100 tracking-wide flex items-center gap-2">
             <i class="fa-solid fa-layer-group text-cyan-400"></i> 作品コレクション
           </h3>
-          <span id="synth-count" class="px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-xs font-black">
+          <span id="synth-count" class="px-3 py-0.5 rounded-full bg-cyan-500/30 text-cyan-300 text-xs font-black border border-cyan-400/40">
             0作品
           </span>
         </div>
@@ -182,13 +187,13 @@
         <!-- Keyword Search Input -->
         <div class="relative w-full md:w-72">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
-          <input type="text" id="search-input" placeholder="タイトルや機能で検索..." class="w-full pl-9 pr-4 py-2 bg-black/30 border border-white/10 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 transition">
+          <input type="text" id="search-input" placeholder="タイトルや機能で検索..." class="w-full pl-9 pr-4 py-2 bg-slate-950/60 border border-white/15 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-cyan-400 transition shadow-inner">
         </div>
       </div>
 
       <!-- Tag Filter Buttons -->
       <div id="tag-filters" class="flex flex-wrap gap-2 pt-1">
-        <button class="tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-500 text-slate-950 border border-cyan-400 transition" data-tag="all">
+        <button class="tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-400 text-slate-950 border border-cyan-300 transition" data-tag="all">
           すべて
         </button>
       </div>
@@ -197,12 +202,12 @@
     <!-- SYNTH CARDS GRID -->
     <section>
       <div id="synth-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- JSにより動的カード挿入 -->
+        <!-- Dynamic Cards Inserted Here -->
       </div>
       
       <!-- Empty State -->
-      <div id="empty-state" class="hidden glass-panel rounded-2xl p-12 text-center text-slate-400 space-y-3">
-        <i class="fa-solid fa-compact-disc text-4xl text-slate-600"></i>
+      <div id="empty-state" class="hidden glass-panel rounded-2xl p-12 text-center text-slate-300 space-y-3">
+        <i class="fa-solid fa-compact-disc text-4xl text-slate-500 animate-spin"></i>
         <p class="font-bold text-sm">該当するシンセサイザーが見つかりませんでした。</p>
       </div>
     </section>
@@ -216,7 +221,7 @@
 
   <!-- DYNAMIC PARSER & CONTROLLER SCRIPT -->
   <script>
-    // 予備リスト（サーバーのディレクトリ自動一覧表示がOFFの場合のフォールバック）
+    // 予備リスト（ローカル実行時や自動検出が失敗した場合のフォールバック）
     const DEFAULT_SYNTH_FILES = [
       'dharma.html',
       'r_l_r_l_synth.html'
@@ -230,45 +235,96 @@
       await loadAllSynths();
     });
 
-    // 1. 同一ディレクトリ内のHTML検出 & Fetchパース
-    async function loadAllSynths() {
-      let fileList = [];
+    // GitHub Pages / サーバー上のHTMLファイルを多角的に自動スキャン
+    async function discoverHtmlFiles() {
+      let detectedFiles = [];
 
+      // 1. synths.json（明示的なマニフェストファイル）があるか確認
       try {
-        // ディレクトリインデックス（./）の取得を試みる
+        const jsonRes = await fetch('synths.json');
+        if (jsonRes.ok) {
+          const jsonList = await jsonRes.json();
+          if (Array.isArray(jsonList) && jsonList.length > 0) {
+            console.log("synths.jsonからファイルリストをロードしました:", jsonList);
+            return jsonList;
+          }
+        }
+      } catch (e) {
+        // synths.jsonが存在しない場合はスキップ
+      }
+
+      // 2. GitHub Pages上の場合、GitHub APIからレポジトリ内のファイル一覧を動的取得
+      const hostname = window.location.hostname;
+      const pathname = window.location.pathname.split('/').filter(Boolean);
+
+      if (hostname.endsWith('.github.io')) {
+        const owner = hostname.split('.')[0];
+        const repo = pathname.length > 0 ? pathname[0] : '';
+
+        if (owner && repo) {
+          try {
+            const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/`;
+            const apiRes = await fetch(apiUrl);
+            if (apiRes.ok) {
+              const contents = await apiRes.json();
+              if (Array.isArray(contents)) {
+                detectedFiles = contents
+                  .filter(item => item.type === 'file' && item.name.endsWith('.html') && item.name !== 'index.html')
+                  .map(item => item.name);
+                
+                if (detectedFiles.length > 0) {
+                  console.log("GitHub APIより全HTMLを自動検出しました:", detectedFiles);
+                  document.getElementById('detection-text').textContent = `GitHub API (${detectedFiles.length}作品検出)`;
+                  return detectedFiles;
+                }
+              }
+            }
+          } catch (err) {
+            console.warn("GitHub API取得エラー。通常スキャンにフォールバックします。", err);
+          }
+        }
+      }
+
+      // 3. ローカルサーバーやDirectory Indexが有効なサーバー用スキャン
+      try {
         const res = await fetch('./');
         if (res.ok) {
           const htmlText = await res.text();
           const doc = new DOMParser().parseFromString(htmlText, 'text/html');
           const links = Array.from(doc.querySelectorAll('a'))
             .map(a => a.getAttribute('href'))
-            .filter(href => href && href.endsWith('.html') && !href.startsWith('index.html') && !href.startsWith('http'));
+            .filter(href => href && href.endsWith('.html') && !href.startsWith('index.html') && !href.startsWith('http') && !href.startsWith('//'));
           
           if (links.length > 0) {
-            fileList = [...new Set(links)];
+            detectedFiles = [...new Set(links)];
+            console.log("ディレクトリインデックスから検出:", detectedFiles);
+            return detectedFiles;
           }
         }
       } catch (e) {
-        console.warn("ディレクトリ自動検出にスキップ。フォールバックリストを使用します。", e);
+        console.warn("ディレクトリインデックス取得スキップ。フォールバックリストを使用します。");
       }
 
-      // 検出できなかった場合はデフォルトリストと結合
-      if (fileList.length === 0) {
-        fileList = DEFAULT_SYNTH_FILES;
-      } else {
-        // 重複を除外してマージ
-        fileList = [...new Set([...fileList, ...DEFAULT_SYNTH_FILES])];
-      }
+      // 4. 上記で取れなかった場合はデフォルトリストと統合
+      return DEFAULT_SYNTH_FILES;
+    }
+
+    // メイン読み込み処理
+    async function loadAllSynths() {
+      const fileList = await discoverHtmlFiles();
+
+      // 重複削除
+      const uniqueFiles = [...new Set([...fileList, ...DEFAULT_SYNTH_FILES])];
 
       // 各HTMLファイルをFetchしてメタデータを解析
-      const fetchPromises = fileList.map(async (file, index) => {
+      const fetchPromises = uniqueFiles.map(async (file, index) => {
         try {
           const response = await fetch(file);
           if (!response.ok) return null;
           const text = await response.text();
           const doc = new DOMParser().parseFromString(text, 'text/html');
 
-          // メタタグの解析（フォールバック付き）
+          // メタタグ解析（フォールバック機能付き）
           const getMeta = (name) => {
             const el = doc.querySelector(`meta[name="${name}"]`);
             return el ? el.getAttribute('content') : null;
@@ -280,7 +336,7 @@
           const tags = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
           const color = getMeta('synth-color') || 'cyan'; // pink, cyan, gold, purple, emerald
           const symbol = getMeta('synth-symbol') || '🎹';
-          const symbolType = getMeta('synth-symbol-type') || 'emoji'; // emoji or kanji
+          const symbolType = getMeta('synth-symbol-type') || 'emoji';
           const numberStr = getMeta('synth-number') || `#${String(index + 1).padStart(2, '0')}`;
 
           return {
@@ -308,13 +364,13 @@
       renderCards();
       setupSearchAndFilters();
 
-      // 初期状態で1番目の作品をヒーローにセット
+      // 初期状態で1番目の作品をヒーローエリアにセット
       if (synthDataStore.length > 0) {
         updateHero(synthDataStore[0]);
       }
     }
 
-    // 2. タグフィルターボタンの動的生成
+    // タグフィルターボタン生成
     function buildTagFilters() {
       const tagSet = new Set();
       synthDataStore.forEach(item => item.tags.forEach(t => tagSet.add(t)));
@@ -328,14 +384,14 @@
 
       tagSet.forEach(tag => {
         const btn = document.createElement('button');
-        btn.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/5 text-slate-300 border border-white/10 transition hover:bg-white/15 hover:text-white hover:scale-105';
+        btn.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15 transition hover:bg-white/20 hover:text-white hover:scale-105';
         btn.dataset.tag = tag;
         btn.textContent = tag;
         container.appendChild(btn);
       });
     }
 
-    // 3. カードグリッドの描画
+    // カードグリッド描画
     function renderCards() {
       const grid = document.getElementById('synth-grid');
       const countEl = document.getElementById('synth-count');
@@ -367,13 +423,13 @@
         card.dataset.id = item.id;
 
         const tagBadges = item.tags.map(t => 
-          `<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/5 border border-white/10 text-slate-300">${t}</span>`
+          `<span class="px-2 py-0.5 text-[11px] font-bold rounded bg-white/10 border border-white/10 text-slate-200">${t}</span>`
         ).join('');
 
         card.innerHTML = `
           <div class="space-y-3">
             <div class="flex justify-between items-center">
-              <span class="text-xs font-black text-cyan-400 tracking-wider">${item.number}</span>
+              <span class="text-xs font-black text-cyan-300 tracking-wider">${item.number}</span>
               <span class="text-2xl transform group-hover:scale-125 transition duration-300">${item.symbol}</span>
             </div>
             <h4 class="text-xl font-black text-white group-hover:text-cyan-300 transition">
@@ -383,13 +439,13 @@
               ${item.description}
             </p>
           </div>
-          <div class="flex flex-wrap gap-1.5 pt-2 border-t border-white/5">
+          <div class="flex flex-wrap gap-1.5 pt-3 border-t border-white/10">
             ${tagBadges}
           </div>
         `;
 
-        // ホバー/タップ時にヒーローエリア更新
-        const handleInteraction = (e) => {
+        // ホバー / タッチでヒーロー更新
+        const handleInteraction = () => {
           document.querySelectorAll('.synth-card').forEach(c => c.classList.remove('active'));
           card.classList.add('active');
           updateHero(item);
@@ -402,7 +458,7 @@
       });
     }
 
-    // 4. HEROエリアの動的更新
+    // HEROエリアの更新
     function updateHero(item) {
       const textContainer = document.getElementById('hero-text-container');
       const visualBox = document.getElementById('hero-visual-box');
@@ -417,13 +473,13 @@
         document.getElementById('hero-desc').textContent = item.description;
         document.getElementById('hero-play-btn').setAttribute('href', item.file);
 
-        // タグの生成
+        // タグ生成
         const tagsContainer = document.getElementById('hero-tags');
         tagsContainer.innerHTML = item.tags.map(t => 
-          `<span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10">${t}</span>`
+          `<span class="px-2.5 py-1 rounded-md bg-white/10 border border-white/15 text-slate-200">${t}</span>`
         ).join('');
 
-        // シンボルエリア
+        // シンボル設定
         const symbolEl = document.getElementById('hero-symbol');
         symbolEl.textContent = item.symbol;
         if (item.symbolType === 'kanji') {
@@ -437,15 +493,14 @@
       }, 150);
     }
 
-    // 5. 検索＆フィルターイベントの設定
+    // 検索＆フィルターイベント設定
     function setupSearchAndFilters() {
-      // タグクリック
       document.getElementById('tag-filters').addEventListener('click', (e) => {
         const btn = e.target.closest('.tag-btn');
         if (!btn) return;
 
         document.querySelectorAll('.tag-btn').forEach(b => {
-          b.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/5 text-slate-300 border border-white/10 transition hover:bg-white/15 hover:text-white hover:scale-105';
+          b.className = 'tag-btn px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/10 text-slate-200 border border-white/15 transition hover:bg-white/20 hover:text-white hover:scale-105';
         });
         btn.className = 'tag-btn active px-3.5 py-1.5 rounded-full text-xs font-bold bg-cyan-400 text-slate-950 border border-cyan-300 transition hover:scale-105';
 
@@ -453,7 +508,6 @@
         renderCards();
       });
 
-      // キーワード検索
       const searchInput = document.getElementById('search-input');
       searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value.trim();
