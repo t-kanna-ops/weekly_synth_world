@@ -275,8 +275,8 @@
         // 金魚サイズ（0.5:最小 ～ 1.5:最大）に応じた最低・最高周波数の範囲算出（比例関係）
         function getFreqRangeForSize(sizeMult) {
             const t = Math.min(Math.max((sizeMult - 0.5) / (1.5 - 0.5), 0), 1);
-            const minFreq = 1000 - t * (1000 - 100);
-            const maxFreq = 10000 - t * (10000 - 400);
+            const minFreq = 800 - t * (800 - 120);
+            const maxFreq = 3200 - t * (3200 - 480);
             return { minFreq, maxFreq };
         }
 
