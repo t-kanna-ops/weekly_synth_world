@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -1208,11 +1208,9 @@
             }
 
             if (bonuses.isCanon) {
-                const canonRhythmSteps = [0, 2, 3, 4, 6, 7, 8, 10, 11, 12, 14, 15];
-                if (canonRhythmSteps.includes(stepIndex)) {
-                    const noteIdx = stepIndex % activeChord.notes.length;
-                    const freq = getNoteFrequency(activeChord.notes[noteIdx], 12);
-                    triggerPluckSynthNote(freq, time);
+                if (stepIndex % 4 === 0) {
+                    const stepDurationSec = (60.0 / gameState.bpm) / 4.0;
+                    triggerLongSoundNote('strings', activeChord.notes, time, stepDurationSec * 3.8);
                 }
             }
 
@@ -1799,6 +1797,7 @@
         }
 
         function closeFinishModalAndKeepPlaying() {
+            gameState.targetBars = 999;
             document.getElementById('modal-finish').classList.add('hidden');
             startPlayback();
         }
