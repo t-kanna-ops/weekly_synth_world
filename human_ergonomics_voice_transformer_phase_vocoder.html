@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Ergonomics Voice Transformer & Phase Vocoder</title>
+    <!-- Tailwind CSS CDN for DAW UI Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#05070c',
+                            panel: '#0e131f',
+                            card: '#141c2e',
+                            border: '#1d2a45',
+                            cyan: '#06b6d4',
+                            magenta: '#f43f5e',
+                            gold: '#fbbf24',
+                            green: '#10b981',
+                            purple: '#a855f7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #05070c;
+            color: #e2e8f0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* サイバーパンク風スライダー装飾 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            height: 8px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 4px;
+            background: #06b6d4;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+            border: 1px solid #67e8f9;
+            transition: all 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #22d3ee;
+            box-shadow: 0 0 15px rgba(34, 211, 238, 1);
+        }
+
+        /* フォルマント専用パープルスライダー */
+        input[type=range].formant-slider::-webkit-slider-thumb {
+            background: #a855f7;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+            border-color: #e9d5ff;
+        }
+        input[type=range].formant-slider::-webkit-slider-thumb:hover {
+            background: #c084fc;
+            box-shadow: 0 0 15px rgba(192, 132, 252, 1);
+        }
+
+        /* ケロケロ度専用ローズスライダー */
+        input[type=range].retune-slider::-webkit-slider-thumb {
+            background: #f43f5e;
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+            border-color: #fda4af;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+
+        .glow-cyan { text-shadow: 0 0 8px rgba(6, 182, 212, 0.6); }
+        .glow-rose { text-shadow: 0 0 8px rgba(244, 63, 94, 0.6); }
+        .glow-purple { text-shadow: 0 0 8px rgba(168, 85, 247, 0.6); }
+
+        .preset-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .preset-btn.active {
+            border-color: #a855f7;
+            background: rgba(168, 85, 247, 0.2);
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-2 sm:p-4 text-gray-200">
+
+    <header class="max-w-7xl w-full mx-auto mb-3 flex flex-col sm:flex-row justify-between items-center bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-2xl">
+        <div class="flex items-center gap-3 mb-2 sm:mb-0">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-cyan-500 to-rose-500 flex items-center justify-center font-black text-xl text-black shadow-lg shadow-purple-500/20">
+                DSP
+            </div>
+            <div>
+                <h1 class="text-base sm:text-lg font-extrabold tracking-wider text-white flex items-center gap-2">
+                    HUMAN ERGONOMICS VOICE TRANSFORMER
+                    <span id="qualityBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">QUALITY 1.0x (FFT 2048)</span>
+                </h1>
+                <p class="text-xs text-gray-400">リアルタイム人間工学フォルマント変換・ピッチシフト・ケロケロ自動補正</p>
+            </div>
+        </div>
+
+        <button id="toggleAudioBtn" class="w-full sm:w-auto px-7 py-2.5 rounded-lg font-bold text-xs tracking-widest transition-all duration-300 bg-gradient-to-r from-purple-500 via-cyan-500 to-blue-600 hover:opacity-90 text-black shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">
+            <svg id="playIcon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="stopIcon" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+            <span id="btnText">START DSP ENGINE</span>
+        </button>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
+        
+        <!-- 左側エリア: Pitch HUD & Spectrogram Canvases -->
+        <section class="lg:col-span-7 flex flex-col gap-3">
+            
+            <!-- AUTO-TUNE PITCH & FORMANT HUD -->
+            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col justify-between">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <span id="hudPing" class="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping"></span>
+                        <h2 class="text-xs font-bold tracking-wider text-purple-400 uppercase">PITCH & FORMANT MONITOR</h2>
+                    </div>
+                    <span id="pitchStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">PITCH LOCK OFF</span>
+                </div>
+
+                <div class="grid grid-cols-12 gap-2 items-center my-1">
+                    <div class="col-span-4 sm:col-span-3 bg-black/60 p-3 rounded-xl border border-cyber-border flex flex-col items-center justify-center min-h-[95px]">
+                        <span class="text-[10px] text-gray-500 uppercase font-mono">TARGET NOTE</span>
+                        <span id="detectedNoteDisp" class="text-3xl sm:text-4xl font-black text-purple-300 tracking-tighter glow-purple">--</span>
+                        <span id="targetFreqDisp" class="text-[10px] font-mono text-purple-400/80">-- Hz Target</span>
+                    </div>
+
+                    <div class="col-span-8 sm:col-span-9 bg-black/60 p-3 rounded-xl border border-cyber-border flex flex-col justify-center min-h-[95px] gap-2">
+                        <div class="flex justify-between items-center text-xs font-mono">
+                            <span class="text-gray-400">DETECTED f₀: <span id="f0Disp" class="text-white font-bold">-- Hz</span></span>
+                            <span class="text-gray-400">CENTS ERROR: <span id="centsDisp" class="text-cyan-400 font-bold">0.0 cents</span></span>
+                        </div>
+
+                        <div class="relative w-full h-6 bg-gray-950 rounded-md border border-gray-800 overflow-hidden flex items-center justify-center">
+                            <div class="absolute w-0.5 h-full bg-cyan-400 z-10 shadow-lg shadow-cyan-400"></div>
+                            <div class="absolute w-1/6 h-full bg-purple-500/10 border-x border-purple-500/30"></div>
+                            <div id="centsNeedle" class="absolute h-full w-2.5 bg-gradient-to-r from-rose-500 to-purple-400 rounded transition-all duration-75 shadow-lg shadow-purple-500/80" style="left: 50%;"></div>
+                        </div>
+
+                        <div class="flex justify-between text-[9px] font-mono text-gray-500 px-1">
+                            <span>-50 cents</span>
+                            <span>-25</span>
+                            <span class="text-purple-400 font-bold">0 (PERFECT LOCK)</span>
+                            <span>+25</span>
+                            <span>+50 cents</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FFT SPECTRUM & FORMANT ENVELOPE CANVAS -->
+            <div class="bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-xl flex flex-col">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xs font-bold text-gray-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                        FFT SPECTRUM vs TRANSFORMED ADDITIVE SINES
+                    </h2>
+                    <span class="text-[10px] font-mono text-gray-500">0 Hz - 22 kHz</span>
+                </div>
+                <div class="relative w-full h-44 sm:h-52 bg-black/80 rounded-lg overflow-hidden border border-gray-800">
+                    <canvas id="spectrumCanvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+
+            <!-- WATERFALL SPECTROGRAM CANVAS -->
+            <div class="bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-xl flex flex-col flex-1">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xs font-bold text-rose-400 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                        TIME-FREQUENCY WATERFALL SPECTROGRAM
+                    </h2>
+                    <span class="text-[10px] font-mono text-gray-500">Log Intensity</span>
+                </div>
+                <div class="relative w-full h-44 sm:h-52 bg-black/80 rounded-lg overflow-hidden border border-gray-800 flex-1">
+                    <canvas id="spectrogramCanvas" class="w-full h-full block"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右側エリア: 人間工学ボイスチェンジャー & 音声合成パラメータ -->
+        <section class="lg:col-span-5 flex flex-col gap-3">
+            
+            <!-- PANEL 1: ERGONOMICS VOICE TRANSFORMER -->
+            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
+                <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+                    <h3 class="text-xs font-bold tracking-wider text-purple-400 uppercase flex items-center gap-2 glow-purple">
+                        🗣️ HUMAN ERGONOMICS TRANSFORMER
+                    </h3>
+                    <span class="text-[10px] font-mono text-purple-300">Vocal Tract Model</span>
+                </div>
+
+                <!-- 6つの人間工学プリセットボタン -->
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="male">
+                        <span class="text-base">👨</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">男性</span>
+                    </button>
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="female">
+                        <span class="text-base">👩</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">女性</span>
+                    </button>
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="boy">
+                        <span class="text-base">👦</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">男の子</span>
+                    </button>
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="girl">
+                        <span class="text-base">👧</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">女の子</span>
+                    </button>
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="oldman">
+                        <span class="text-base">👴</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">おじいさん</span>
+                    </button>
+                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="oldwoman">
+                        <span class="text-base">👵</span>
+                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">おばあさん</span>
+                    </button>
+                </div>
+
+                <!-- フォルマントシフト (0.50x 〜 2.00x) -->
+                <div class="flex flex-col gap-1 mt-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="formantScaleSlider" class="font-bold text-purple-300">Formant Shift (声道長スケーリング)</label>
+                        <span id="formantScaleVal" class="font-mono text-purple-400 font-bold">1.00x (Standard)</span>
+                    </div>
+                    <input type="range" id="formantScaleSlider" min="0.5" max="2.0" value="1.0" step="0.01" class="w-full formant-slider">
+                    <p class="text-[10px] text-gray-400">声道の長さを伸縮。1.0未満で喉を太く(男声化)、1.0超で短縮(女声・子供化)。</p>
+                </div>
+
+                <!-- ピッチオフセットシフト (-12 〜 +12 半音) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="pitchShiftSlider" class="font-bold text-cyan-300">Pitch Shift (声帯ピッチシフト)</label>
+                        <span id="pitchShiftVal" class="font-mono text-cyan-400 font-bold">0 Semitones</span>
+                    </div>
+                    <input type="range" id="pitchShiftSlider" min="-12" max="12" value="0" step="1" class="w-full">
+                </div>
+
+                <!-- スペクトラルチルト / 年齢質感 (-5.0 〜 +5.0) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="spectralTiltSlider" class="text-gray-300">Spectral Tilt / Age Character (年齢質感)</label>
+                        <span id="spectralTiltVal" class="font-mono text-yellow-400 font-bold">0.0 (Neutral)</span>
+                    </div>
+                    <input type="range" id="spectralTiltSlider" min="-5.0" max="5.0" value="0.0" step="0.1" class="w-full">
+                    <p class="text-[10px] text-gray-400">高域傾斜。プラスで若々しく明瞭、マイナスで加齢・籠もった声質を表現。</p>
+                </div>
+
+                <!-- 加齢トリモロ・ビブラート (0% 〜 100%) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="tremoloSlider" class="text-gray-300">Age Tremolo / Vibrato (神経性震え)</label>
+                        <span id="tremoloVal" class="font-mono text-rose-400 font-bold">0%</span>
+                    </div>
+                    <input type="range" id="tremoloSlider" min="0" max="100" value="0" step="1" class="w-full">
+                    <p class="text-[10px] text-gray-400">老年声特有の約4.2Hz不随意筋振幅・周波数モジュレーションを付加。</p>
+                </div>
+            </div>
+
+            <!-- PANEL 2: WAVEFORM SELECT & HARD AUTO-TUNE -->
+            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
+                <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+                    <h3 class="text-xs font-bold tracking-wider text-rose-400 uppercase flex items-center gap-2 glow-rose">
+                        🎤 SYNTH WAVEFORM & HARD AUTO-TUNE
+                    </h3>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="pitchCorrectToggle" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                    </label>
+                </div>
+
+                <!-- 合成波形選択 (Sine / Triangle / Square / Sawtooth) -->
+                <div class="flex flex-col gap-1">
+                    <label for="waveformSelect" class="text-xs font-medium text-gray-300">Synthesizer Waveform (合成波形)</label>
+                    <select id="waveformSelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
+                        <option value="sine" selected>Sine Wave (サイン波 - ピュア音)</option>
+                        <option value="triangle">Triangle Wave (三角波 - 温かみのある丸み音)</option>
+                        <option value="square">Square Wave (矩形波 - 8bitファミコン風音)</option>
+                        <option value="sawtooth">Sawtooth Wave (鋸歯状波 - 煌びやかなリード音)</option>
+                    </select>
+                </div>
+
+                <!-- スケール & ルートキー選択 -->
+                <div class="grid grid-cols-12 gap-2">
+                    <div class="col-span-4 flex flex-col gap-1">
+                        <label for="rootKeySelect" class="text-xs font-medium text-gray-300">Root Key</label>
+                        <select id="rootKeySelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
+                            <option value="0">C</option>
+                            <option value="1">C# / Db</option>
+                            <option value="2">D</option>
+                            <option value="3">D# / Eb</option>
+                            <option value="4">E</option>
+                            <option value="5">F</option>
+                            <option value="6">F# / Gb</option>
+                            <option value="7">G</option>
+                            <option value="8">G# / Ab</option>
+                            <option value="9">A</option>
+                            <option value="10">A# / Bb</option>
+                            <option value="11">B</option>
+                        </select>
+                    </div>
+
+                    <div class="col-span-8 flex flex-col gap-1">
+                        <label for="scaleSelect" class="text-xs font-medium text-gray-300">Target Scale / Mode</label>
+                        <select id="scaleSelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
+                            <option value="chromatic" selected>Chromatic (All Semitones)</option>
+                            <option value="major">Major Scale (Ionian)</option>
+                            <option value="minor">Natural Minor Scale</option>
+                            <option value="pentatonic">Minor Pentatonic</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ケロケロ補正速度 (Retune Speed) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="retuneSpeedSlider" class="font-bold text-rose-400">Retune Speed (ケロケロ度)</label>
+                        <span id="retuneSpeedVal" class="font-mono text-rose-400 font-bold">100% (Instant Snap)</span>
+                    </div>
+                    <input type="range" id="retuneSpeedSlider" min="0" max="1" value="1.0" step="0.01" class="w-full retune-slider">
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="correctAmountSlider" class="text-gray-300">Correction Amount (補正強度)</label>
+                        <span id="correctAmountVal" class="font-mono text-cyan-400 font-bold">100%</span>
+                    </div>
+                    <input type="range" id="correctAmountSlider" min="0" max="1" value="1.0" step="0.01" class="w-full">
+                </div>
+            </div>
+
+            <!-- PANEL 3: DSP RESOLUTION & ADVANCED CONTROLS -->
+            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
+                <h3 class="text-xs font-bold tracking-wider text-cyan-400 uppercase pb-2 border-b border-gray-800 glow-cyan">
+                    🎛️ DSP RESOLUTION & FINE CONTROLS
+                </h3>
+
+                <!-- 音質スライダー (0.5x 〜 2.0x) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="qualitySlider" class="font-bold text-cyan-300">Quality Factor (処理解像度)</label>
+                        <span id="qualityVal" class="font-mono text-cyan-400 font-bold">1.0x (Standard)</span>
+                    </div>
+                    <input type="range" id="qualitySlider" min="0.5" max="2.0" value="1.0" step="0.5" class="w-full">
+                </div>
+
+                <!-- サイン波上限本数 (16〜1024本) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="topNSlider" class="font-medium text-pink-300">Max Waves (16〜1024本)</label>
+                        <span id="topNVal" class="font-mono text-pink-400 font-bold">512 Waves</span>
+                    </div>
+                    <input type="range" id="topNSlider" min="16" max="1024" value="512" step="16" class="w-full">
+                </div>
+
+                <!-- ノイズスレッショルド (0.00000 〜 0.00100) -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-xs">
+                        <label for="threshSlider" class="text-gray-300">Noise Threshold (ノイズ除去)</label>
+                        <span id="threshVal" class="font-mono text-yellow-400 font-bold">0.00000 (Disabled)</span>
+                    </div>
+                    <input type="range" id="threshSlider" min="0.00000" max="0.00100" value="0.00000" step="0.00001" class="w-full">
+                    <p class="text-[10px] text-gray-400">0.00000〜0.00100の微小単位でノイズゲート閾値を調整。</p>
+                </div>
+
+                <!-- Mix & Gain Controls -->
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="dryWetSlider" class="text-gray-300">Dry / Wet Mix</label>
+                            <span id="dryWetVal" class="font-mono text-cyan-400 font-bold">100%</span>
+                        </div>
+                        <input type="range" id="dryWetSlider" min="0" max="1" value="1" step="0.01" class="w-full">
+                    </div>
+
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between text-xs">
+                            <label for="masterGainSlider" class="text-gray-300">Master Vol</label>
+                            <span id="masterGainVal" class="font-mono text-gray-300">1.0x</span>
+                        </div>
+                        <input type="range" id="masterGainSlider" min="0" max="2" value="1.0" step="0.05" class="w-full">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div class="bg-black/60 p-2 rounded border border-gray-800">
+                        <span class="text-gray-500 block text-[10px]">ACTIVE WAVES</span>
+                        <span id="activeSinesDisp" class="font-mono font-bold text-purple-400">0 / 512</span>
+                    </div>
+                    <div class="bg-black/60 p-2 rounded border border-gray-800">
+                        <span class="text-gray-500 block text-[10px]">COMBINED PITCH RATIO</span>
+                        <span id="pitchRatioDisp" class="font-mono font-bold text-cyan-400">1.000x</span>
+                    </div>
+                </div>
+
+                <!-- VU Level Meter -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between text-[10px] text-gray-400">
+                        <span>PEAK OUTPUT LEVEL</span>
+                        <span id="peakLevelDb">-inf dB</span>
+                    </div>
+                    <div class="w-full bg-black/90 h-2.5 rounded-full overflow-hidden p-0.5 border border-gray-800">
+                        <div id="meterBar" class="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-rose-500 rounded-full w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        /**
+         * インライン AudioWorkletProcessor コード (Blob URL経由で別スレッド実行)
+         * - Cooley-Tukey 高速FFT
+         * - Phase Vocoder 瞬時周波数推定
+         * - 人間工学モデル (フォルマント伸縮, ピッチシフト, スペクトラルチルト, 加齢トリモロLFO)
+         * - 合成波形 (サイン波, 三角波, 矩形波, 鋸歯状波) オシレータバンク
+         */
+        const workletProcessorCode = `
+            class HumanErgonomicsVocoderProcessor extends AudioWorkletProcessor {
+                constructor() {
+                    super();
+                    this.fftSize = 2048;
+                    this.hopSize = 512;
+                    this.initBuffers();
+
+                    // パラメータ初期値
+                    this.maxTopN = 512;
+                    this.dryWet = 1.0;
+                    this.inputGain = 1.0;
+                    this.masterGain = 1.0;
+                    this.threshold = 0.0;
+                    this.waveform = 'sine';
+
+                    // 人間工学パラメータ
+                    this.formantScale = 1.0;
+                    this.pitchShiftSemitones = 0;
+                    this.spectralTilt = 0.0;
+                    this.tremoloAmount = 0.0;
+
+                    // ピッチ補正パラメータ
+                    this.pitchCorrectEnabled = true;
+                    this.rootKey = 0;
+                    this.selectedScale = 'chromatic';
+                    this.retuneSpeed = 1.0;
+                    this.correctAmount = 1.0;
+
+                    this.currentRatioR = 1.0;
+                    this.lfoPhase = 0.0; // 4.2Hz 不随意筋振動用 LFO
+
+                    this.port.onmessage = (e) => {
+                        const d = e.data;
+                        if (d.type === 'reconfig') {
+                            this.fftSize = d.fftSize;
+                            this.hopSize = d.hopSize;
+                            this.initBuffers();
+                        } else {
+                            if (d.maxTopN !== undefined) this.maxTopN = d.maxTopN;
+                            if (d.dryWet !== undefined) this.dryWet = d.dryWet;
+                            if (d.inputGain !== undefined) this.inputGain = d.inputGain;
+                            if (d.masterGain !== undefined) this.masterGain = d.masterGain;
+                            if (d.threshold !== undefined) this.threshold = d.threshold;
+                            if (d.waveform !== undefined) this.waveform = d.waveform;
+
+                            if (d.formantScale !== undefined) this.formantScale = d.formantScale;
+                            if (d.pitchShiftSemitones !== undefined) this.pitchShiftSemitones = d.pitchShiftSemitones;
+                            if (d.spectralTilt !== undefined) this.spectralTilt = d.spectralTilt;
+                            if (d.tremoloAmount !== undefined) this.tremoloAmount = d.tremoloAmount;
+
+                            if (d.pitchCorrectEnabled !== undefined) this.pitchCorrectEnabled = d.pitchCorrectEnabled;
+                            if (d.rootKey !== undefined) this.rootKey = d.rootKey;
+                            if (d.selectedScale !== undefined) this.selectedScale = d.selectedScale;
+                            if (d.retuneSpeed !== undefined) this.retuneSpeed = d.retuneSpeed;
+                            if (d.correctAmount !== undefined) this.correctAmount = d.correctAmount;
+                        }
+                    };
+                }
+
+                initBuffers() {
+                    this.numBins = this.fftSize / 2;
+                    this.inputRingBuffer = new Float32Array(this.fftSize);
+                    this.inputWritePos = 0;
+                    this.hopCounter = 0;
+
+                    this.real = new Float32Array(this.fftSize);
+                    this.imag = new Float32Array(this.fftSize);
+
+                    // ブラックマン窓 (Blackman Window)
+                    this.window = new Float32Array(this.fftSize);
+                    const a0 = 0.42, a1 = 0.5, a2 = 0.08;
+                    for (let i = 0; i < this.fftSize; i++) {
+                        this.window[i] = a0 - a1 * Math.cos((2.0 * Math.PI * i) / this.fftSize) + a2 * Math.cos((4.0 * Math.PI * i) / this.fftSize);
+                    }
+
+                    this.prevPhase = new Float32Array(this.numBins);
+                    this.magnitudes = new Float32Array(this.numBins);
+                    this.instFrequencies = new Float32Array(this.numBins);
+
+                    // オシレータバッファ
+                    this.oscPhase = new Float32Array(this.numBins);
+                    this.currentAmp = new Float32Array(this.numBins);
+                    this.targetAmp = new Float32Array(this.numBins);
+                    this.stepAmp = new Float32Array(this.numBins);
+
+                    this.currentFreq = new Float32Array(this.numBins);
+                    this.targetFreq = new Float32Array(this.numBins);
+                    this.stepFreq = new Float32Array(this.numBins);
+
+                    this.binIndices = new Uint16Array(this.numBins);
+                    for (let i = 0; i < this.numBins; i++) this.binIndices[i] = i;
+
+                    this.initFFTTables();
+                }
+
+                initFFTTables() {
+                    const N = this.fftSize;
+                    this.bitRev = new Uint32Array(N);
+                    let j = 0;
+                    for (let i = 0; i < N; i++) {
+                        this.bitRev[i] = j;
+                        let m = N >> 1;
+                        while (m >= 1 && j >= m) {
+                            j -= m;
+                            m >>= 1;
+                        }
+                        j += m;
+                    }
+
+                    this.cosTable = new Float32Array(N / 2);
+                    this.sinTable = new Float32Array(N / 2);
+                    for (let i = 0; i < N / 2; i++) {
+                        this.cosTable[i] = Math.cos((-2.0 * Math.PI * i) / N);
+                        this.sinTable[i] = Math.sin((-2.0 * Math.PI * i) / N);
+                    }
+                }
+
+                fft(real, imag) {
+                    const N = this.fftSize;
+                    for (let i = 0; i < N; i++) {
+                        const rev = this.bitRev[i];
+                        if (i < rev) {
+                            let tr = real[i]; real[i] = real[rev]; real[rev] = tr;
+                            let ti = imag[i]; imag[i] = imag[rev]; imag[rev] = ti;
+                        }
+                    }
+
+                    for (let len = 2; len <= N; len <<= 1) {
+                        const halfLen = len >> 1;
+                        const step = N / len;
+                        for (let i = 0; i < N; i += len) {
+                            for (let j = 0; j < halfLen; j++) {
+                                const k = j * step;
+                                const c = this.cosTable[k];
+                                const s = this.sinTable[k];
+                                const ur = real[i + j];
+                                const ui = imag[i + j];
+                                const vr = real[i + j + halfLen] * c - imag[i + j + halfLen] * s;
+                                const vi = real[i + j + halfLen] * s + imag[i + j + halfLen] * c;
+
+                                real[i + j] = ur + vr;
+                                imag[i + j] = ui + vi;
+                                real[i + j + halfLen] = ur - vr;
+                                imag[i + j + halfLen] = ui - vi;
+                            }
+                        }
+                    }
+                }
+
+                /**
+                 * ヴォーカル基音 (f0) 検出 (65Hz ~ 950Hz)
+                 */
+                detectFundamentalFrequency() {
+                    const binWidth = sampleRate / this.fftSize;
+                    const minBin = Math.max(1, Math.floor(65 / binWidth));
+                    const maxBin = Math.min(this.numBins - 1, Math.ceil(950 / binWidth));
+
+                    let maxMag = 0;
+                    let bestBin = -1;
+
+                    for (let k = minBin; k <= maxBin; k++) {
+                        const mag = this.magnitudes[k];
+                        if (mag > maxMag) {
+                            maxMag = mag;
+                            bestBin = k;
+                        }
+                    }
+
+                    if (bestBin === -1 || maxMag < 0.0001) return 0;
+
+                    for (let k = minBin; k < bestBin; k++) {
+                        if (this.magnitudes[k] > maxMag * 0.4) {
+                            bestBin = k;
+                            break;
+                        }
+                    }
+
+                    return this.instFrequencies[bestBin];
+                }
+
+                /**
+                 * ハード・オートチューン目標音階へのピッチ比算出
+                 */
+                calculateTargetPitchRatio(f0) {
+                    if (f0 <= 0 || !this.pitchCorrectEnabled) return 1.0;
+
+                    const exactMIDI = 12 * Math.log2(f0 / 440) + 69;
+                    let targetMIDI = Math.round(exactMIDI);
+
+                    const relativeNote = (((targetMIDI - this.rootKey) % 12) + 12) % 12;
+                    let allowedNotes = [0,1,2,3,4,5,6,7,8,9,10,11];
+
+                    if (this.selectedScale === 'major') allowedNotes = [0, 2, 4, 5, 7, 9, 11];
+                    else if (this.selectedScale === 'minor') allowedNotes = [0, 2, 3, 5, 7, 8, 10];
+                    else if (this.selectedScale === 'pentatonic') allowedNotes = [0, 3, 5, 7, 10];
+
+                    if (allowedNotes.length < 12) {
+                        let minDiff = 99;
+                        let bestNote = relativeNote;
+                        for (let n of allowedNotes) {
+                            let diff = Math.abs(relativeNote - n);
+                            if (diff > 6) diff = 12 - diff;
+                            if (diff < minDiff) {
+                                minDiff = diff;
+                                bestNote = n;
+                            }
+                        }
+                        targetMIDI = targetMIDI - relativeNote + bestNote;
+                    }
+
+                    const fTarget = 440 * Math.pow(2, (targetMIDI - 69) / 12);
+                    const rawRatio = fTarget / f0;
+
+                    return Math.max(0.5, Math.min(2.0, 1.0 + (rawRatio - 1.0) * this.correctAmount));
+                }
+
+                /**
+                 * 振幅の線形補間（フォルマント envelope 参照用）
+                 */
+                getInterpolatedMagnitude(freq) {
+                    const binWidth = sampleRate / this.fftSize;
+                    const floatBin = freq / binWidth;
+                    if (floatBin <= 0) return this.magnitudes[0];
+                    if (floatBin >= this.numBins - 1) return this.magnitudes[this.numBins - 1];
+
+                    const b0 = Math.floor(floatBin);
+                    const b1 = b0 + 1;
+                    const frac = floatBin - b0;
+
+                    return this.magnitudes[b0] * (1.0 - frac) + this.magnitudes[b1] * frac;
+                }
+
+                /**
+                 * STFT & 人間工学フォルマント・ピッチ・波形変換解析
+                 */
+                analyzeFrame() {
+                    for (let i = 0; i < this.fftSize; i++) {
+                        const idx = (this.inputWritePos - this.fftSize + i + this.fftSize) % this.fftSize;
+                        this.real[i] = this.inputRingBuffer[idx] * this.window[i];
+                        this.imag[i] = 0.0;
+                    }
+
+                    this.fft(this.real, this.imag);
+
+                    const expPhaseAdv = (2.0 * Math.PI * this.hopSize) / this.fftSize;
+
+                    for (let k = 0; k < this.numBins; k++) {
+                        const r = this.real[k];
+                        const im = this.imag[k];
+                        const mag = (Math.sqrt(r * r + im * im) * 2.0) / this.fftSize;
+                        this.magnitudes[k] = mag;
+
+                        const phase = Math.atan2(im, r);
+                        let dPhase = phase - this.prevPhase[k];
+                        this.prevPhase[k] = phase;
+
+                        let dev = dPhase - (k * expPhaseAdv);
+                        dev = dev - 2.0 * Math.PI * Math.round(dev / (2.0 * Math.PI));
+
+                        const freqDev = dev / ((2.0 * Math.PI * this.hopSize) / sampleRate);
+                        let instFreq = (k * (sampleRate / this.fftSize)) + freqDev;
+
+                        if (instFreq < 0) instFreq = 0;
+                        if (instFreq > sampleRate / 2) instFreq = sampleRate / 2;
+
+                        this.instFrequencies[k] = instFreq;
+                    }
+
+                    // 1. オートチューン目標比率
+                    const f0 = this.detectFundamentalFrequency();
+                    const targetAutoRatio = this.calculateTargetPitchRatio(f0);
+
+                    if (this.retuneSpeed >= 0.99) {
+                        this.currentRatioR = targetAutoRatio;
+                    } else {
+                        const factor = Math.pow(this.retuneSpeed, 2.5) * 0.8 + 0.02;
+                        this.currentRatioR += (targetAutoRatio - this.currentRatioR) * factor;
+                    }
+
+                    // 2. 声帯ピッチシフト比率 (Semitones)
+                    const userPitchRatio = Math.pow(2, this.pitchShiftSemitones / 12);
+                    
+                    // 総合ピッチ倍率 (P)
+                    const totalPitchRatio = this.currentRatioR * userPitchRatio;
+
+                    // 3. フォルマントシフト倍率 (F)
+                    const formantF = Math.max(0.5, Math.min(2.0, this.formantScale));
+
+                    // 振幅順ソート
+                    const mags = this.magnitudes;
+                    this.binIndices.sort((a, b) => mags[b] - mags[a]);
+
+                    this.targetAmp.fill(0);
+
+                    let activeCount = 0;
+                    const limit = Math.min(this.maxTopN, this.numBins);
+
+                    for (let i = 0; i < limit; i++) {
+                        const binIdx = this.binIndices[i];
+                        const origMag = mags[binIdx];
+
+                        if (origMag >= this.threshold) {
+                            const origFreq = this.instFrequencies[binIdx];
+                            
+                            // 合成周波数 = 原音周波数 * 総合ピッチ倍率
+                            const synthFreq = Math.min(sampleRate / 2, origFreq * totalPitchRatio);
+
+                            // フォルマント構造維持のための Envelope Lookup Frequency = synthFreq / formantF
+                            const lookupFreq = synthFreq / formantF;
+
+                            // フォルマント移動後の振幅を取得
+                            let transformedMag = this.getInterpolatedMagnitude(lookupFreq);
+
+                            // 4. Spectral Tilt (高域傾斜/年齢質感) 適用
+                            if (this.spectralTilt !== 0) {
+                                const normFreq = Math.max(100, synthFreq) / 1000.0;
+                                const tiltFactor = Math.pow(normFreq, this.spectralTilt / 3.5);
+                                transformedMag *= tiltFactor;
+                            }
+
+                            this.targetAmp[binIdx] = transformedMag;
+                            this.targetFreq[binIdx] = synthFreq;
+                            activeCount++;
+                        }
+                    }
+
+                    // 補間ステップ
+                    for (let k = 0; k < this.numBins; k++) {
+                        this.stepAmp[k] = (this.targetAmp[k] - this.currentAmp[k]) / this.hopSize;
+                        this.stepFreq[k] = (this.targetFreq[k] - this.currentFreq[k]) / this.hopSize;
+                    }
+
+                    // GUIデータ送信
+                    this.port.postMessage({
+                        type: 'frameData',
+                        magnitudes: this.magnitudes,
+                        topIndices: this.binIndices.slice(0, limit),
+                        activeCount: activeCount,
+                        f0: f0,
+                        ratioR: totalPitchRatio
+                    });
+                }
+
+                process(inputs, outputs) {
+                    const input = inputs[0];
+                    const output = outputs[0];
+                    if (!output || output.length === 0) return true;
+
+                    const inputChannel = (input && input.length > 0) ? input[0] : null;
+                    const outputChannel = output[0];
+                    const numSamples = outputChannel.length;
+
+                    // 加齢不随意筋トレモロ/ビブラート (約 4.2Hz LFO)
+                    const lfoStep = (2.0 * Math.PI * 4.2) / sampleRate;
+
+                    for (let i = 0; i < numSamples; i++) {
+                        const inSample = inputChannel ? inputChannel[i] * this.inputGain : 0.0;
+
+                        this.inputRingBuffer[this.inputWritePos] = inSample;
+                        this.inputWritePos = (this.inputWritePos + 1) % this.fftSize;
+
+                        this.hopCounter++;
+                        if (this.hopCounter >= this.hopSize) {
+                            this.analyzeFrame();
+                            this.hopCounter = 0;
+                        }
+
+                        this.lfoPhase += lfoStep;
+                        if (this.lfoPhase >= 2.0 * Math.PI) this.lfoPhase -= 2.0 * Math.PI;
+
+                        const lfoSin = Math.sin(this.lfoPhase);
+                        const tremoloGainMod = 1.0 + (this.tremoloAmount / 100.0) * 0.35 * lfoSin;
+                        const vibratoFreqMod = 1.0 + (this.tremoloAmount / 100.0) * 0.015 * lfoSin;
+
+                        // 加算合成オシレータバンク
+                        let synthSample = 0.0;
+                        const invFs = 1.0 / sampleRate;
+
+                        for (let k = 0; k < this.numBins; k++) {
+                            this.currentAmp[k] += this.stepAmp[k];
+                            this.currentFreq[k] += this.stepFreq[k];
+
+                            const amp = this.currentAmp[k] * tremoloGainMod;
+                            if (amp > 1e-7) {
+                                const freq = this.currentFreq[k] * vibratoFreqMod;
+                                const phaseAdv = 2.0 * Math.PI * freq * invFs;
+
+                                this.oscPhase[k] += phaseAdv;
+                                if (this.oscPhase[k] >= 2.0 * Math.PI) {
+                                    this.oscPhase[k] -= 2.0 * Math.PI;
+                                }
+
+                                const phi = this.oscPhase[k];
+                                let oscVal = 0.0;
+
+                                // 波形ジェネレータ
+                                if (this.waveform === 'sine') {
+                                    oscVal = Math.sin(phi);
+                                } else if (this.waveform === 'triangle') {
+                                    oscVal = (Math.abs((phi / Math.PI) - 1.0) * 2.0 - 1.0) * 0.85;
+                                } else if (this.waveform === 'square') {
+                                    oscVal = (Math.sin(phi) >= 0 ? 0.6 : -0.6);
+                                } else if (this.waveform === 'sawtooth') {
+                                    oscVal = (((phi / Math.PI) % 2.0) - 1.0) * 0.6;
+                                }
+
+                                synthSample += amp * oscVal;
+                            }
+                        }
+
+                        const blendedSample = (inSample * (1.0 - this.dryWet) + synthSample * this.dryWet) * this.masterGain;
+                        outputChannel[i] = Math.tanh(blendedSample); // ソフトクリッピング
+
+                        if (output.length > 1) {
+                            output[1][i] = outputChannel[i];
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            registerProcessor('human-ergonomics-vocoder-processor', HumanErgonomicsVocoderProcessor);
+        `;
+
+        let audioCtx = null;
+        let micStream = null;
+        let micSource = null;
+        let vocoderNode = null;
+        let isRunning = false;
+
+        const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+        // 人間工学 6 プリセット定義
+        const ERGONOMICS_PRESETS = {
+            male:     { formant: 0.88, pitch: -4, tilt: -0.5, tremolo: 0 },
+            female:   { formant: 1.18, pitch: 4,  tilt: 1.0,  tremolo: 0 },
+            boy:      { formant: 1.35, pitch: 6,  tilt: 1.5,  tremolo: 0 },
+            girl:     { formant: 1.45, pitch: 9,  tilt: 2.0,  tremolo: 0 },
+            oldman:   { formant: 0.82, pitch: -6, tilt: -2.5, tremolo: 35 },
+            oldwoman: { formant: 1.05, pitch: 1,  tilt: -2.0, tremolo: 40 }
+        };
+
+        // DOM 参照
+        const toggleBtn = document.getElementById('toggleAudioBtn');
+        const playIcon = document.getElementById('playIcon');
+        const stopIcon = document.getElementById('stopIcon');
+        const btnText = document.getElementById('btnText');
+        const qualityBadge = document.getElementById('qualityBadge');
+
+        const pitchStatusBadge = document.getElementById('pitchStatusBadge');
+        const detectedNoteDisp = document.getElementById('detectedNoteDisp');
+        const targetFreqDisp = document.getElementById('targetFreqDisp');
+        const f0Disp = document.getElementById('f0Disp');
+        const centsDisp = document.getElementById('centsDisp');
+        const centsNeedle = document.getElementById('centsNeedle');
+
+        // Human Ergonomics Controls
+        const formantScaleSlider = document.getElementById('formantScaleSlider');
+        const formantScaleVal = document.getElementById('formantScaleVal');
+        const pitchShiftSlider = document.getElementById('pitchShiftSlider');
+        const pitchShiftVal = document.getElementById('pitchShiftVal');
+        const spectralTiltSlider = document.getElementById('spectralTiltSlider');
+        const spectralTiltVal = document.getElementById('spectralTiltVal');
+        const tremoloSlider = document.getElementById('tremoloSlider');
+        const tremoloVal = document.getElementById('tremoloVal');
+
+        // Waveform & Pitch Controls
+        const waveformSelect = document.getElementById('waveformSelect');
+        const pitchCorrectToggle = document.getElementById('pitchCorrectToggle');
+        const rootKeySelect = document.getElementById('rootKeySelect');
+        const scaleSelect = document.getElementById('scaleSelect');
+        const retuneSpeedSlider = document.getElementById('retuneSpeedSlider');
+        const retuneSpeedVal = document.getElementById('retuneSpeedVal');
+        const correctAmountSlider = document.getElementById('correctAmountSlider');
+        const correctAmountVal = document.getElementById('correctAmountVal');
+
+        // DSP Resolution & Mix Controls
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityVal = document.getElementById('qualityVal');
+        const topNSlider = document.getElementById('topNSlider');
+        const topNVal = document.getElementById('topNVal');
+        const threshSlider = document.getElementById('threshSlider');
+        const threshVal = document.getElementById('threshVal');
+        const dryWetSlider = document.getElementById('dryWetSlider');
+        const dryWetVal = document.getElementById('dryWetVal');
+        const masterGainSlider = document.getElementById('masterGainSlider');
+        const masterGainVal = document.getElementById('masterGainVal');
+
+        const activeSinesDisp = document.getElementById('activeSinesDisp');
+        const pitchRatioDisp = document.getElementById('pitchRatioDisp');
+        const meterBar = document.getElementById('meterBar');
+        const peakLevelDb = document.getElementById('peakLevelDb');
+
+        const spectrumCanvas = document.getElementById('spectrumCanvas');
+        const specCtx = spectrumCanvas.getContext('2d');
+        const spectrogramCanvas = document.getElementById('spectrogramCanvas');
+        const gramCtx = spectrogramCanvas.getContext('2d');
+
+        let latestFrameData = null;
+
+        async function initAudio() {
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        latency: 0
+                    }
+                });
+
+                const blob = new Blob([workletProcessorCode], { type: 'application/javascript' });
+                const workletUrl = URL.createObjectURL(blob);
+                await audioCtx.audioWorklet.addModule(workletUrl);
+                URL.revokeObjectURL(workletUrl);
+
+                micSource = audioCtx.createMediaStreamSource(micStream);
+                vocoderNode = new AudioWorkletNode(audioCtx, 'human-ergonomics-vocoder-processor');
+
+                applyQualitySettings();
+                updateProcessorParams();
+
+                vocoderNode.port.onmessage = (e) => {
+                    if (e.data.type === 'frameData') {
+                        latestFrameData = e.data;
+                    }
+                };
+
+                micSource.connect(vocoderNode);
+                vocoderNode.connect(audioCtx.destination);
+
+                isRunning = true;
+                updateUIState();
+                requestAnimationFrame(renderLoop);
+
+            } catch (err) {
+                console.error("Audio Engine Init Failed:", err);
+                alert(`音声処理エンジンの起動に失敗しました:\n${err.message || err}\nマイク許可設定を確認してください。`);
+                stopAudio();
+            }
+        }
+
+        function stopAudio() {
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+                micStream = null;
+            }
+            if (audioCtx) {
+                audioCtx.close();
+                audioCtx = null;
+            }
+            isRunning = false;
+            updateUIState();
+        }
+
+        function updateUIState() {
+            if (isRunning) {
+                playIcon.classList.add('hidden');
+                stopIcon.classList.remove('hidden');
+                btnText.textContent = "STOP DSP ENGINE";
+                toggleBtn.classList.remove('from-purple-500', 'via-cyan-500', 'to-blue-600');
+                toggleBtn.classList.add('from-rose-600', 'to-red-600', 'shadow-rose-500/30');
+            } else {
+                playIcon.classList.remove('hidden');
+                stopIcon.classList.add('hidden');
+                btnText.textContent = "START DSP ENGINE";
+                toggleBtn.classList.remove('from-rose-600', 'to-red-600', 'shadow-rose-500/30');
+                toggleBtn.classList.add('from-purple-500', 'via-cyan-500', 'to-blue-600', 'shadow-purple-500/30');
+                activeSinesDisp.textContent = "0 / 512";
+                pitchRatioDisp.textContent = "1.000x";
+                detectedNoteDisp.textContent = "--";
+                targetFreqDisp.textContent = "-- Hz Target";
+                f0Disp.textContent = "-- Hz";
+                centsDisp.textContent = "0.0 cents";
+                centsNeedle.style.left = "50%";
+                meterBar.style.width = "0%";
+                peakLevelDb.textContent = "-inf dB";
+            }
+        }
+
+        function applyQualitySettings() {
+            const q = parseFloat(qualitySlider.value);
+            let fftSize = 2048;
+            let hopSize = 512;
+
+            if (q === 0.5) {
+                fftSize = 1024; hopSize = 512;
+                qualityVal.textContent = "0.5x (Fast)";
+                qualityBadge.textContent = "QUALITY 0.5x (FFT 1024)";
+            } else if (q === 1.0) {
+                fftSize = 2048; hopSize = 512;
+                qualityVal.textContent = "1.0x (Standard)";
+                qualityBadge.textContent = "QUALITY 1.0x (FFT 2048)";
+            } else if (q === 1.5) {
+                fftSize = 4096; hopSize = 512;
+                qualityVal.textContent = "1.5x (High)";
+                qualityBadge.textContent = "QUALITY 1.5x (FFT 4096)";
+            } else if (q === 2.0) {
+                fftSize = 4096; hopSize = 256;
+                qualityVal.textContent = "2.0x (Ultra High)";
+                qualityBadge.textContent = "QUALITY 2.0x (FFT 4096 / Hop 256)";
+            }
+
+            if (vocoderNode) {
+                vocoderNode.port.postMessage({
+                    type: 'reconfig',
+                    fftSize: fftSize,
+                    hopSize: hopSize
+                });
+            }
+        }
+
+        function updateProcessorParams() {
+            if (!vocoderNode) return;
+
+            vocoderNode.port.postMessage({
+                maxTopN: parseInt(topNSlider.value, 10),
+                dryWet: parseFloat(dryWetSlider.value),
+                threshold: parseFloat(threshSlider.value),
+                masterGain: parseFloat(masterGainSlider.value),
+                waveform: waveformSelect.value,
+
+                formantScale: parseFloat(formantScaleSlider.value),
+                pitchShiftSemitones: parseInt(pitchShiftSlider.value, 10),
+                spectralTilt: parseFloat(spectralTiltSlider.value),
+                tremoloAmount: parseFloat(tremoloSlider.value),
+
+                pitchCorrectEnabled: pitchCorrectToggle.checked,
+                rootKey: parseInt(rootKeySelect.value, 10),
+                selectedScale: scaleSelect.value,
+                retuneSpeed: parseFloat(retuneSpeedSlider.value),
+                correctAmount: parseFloat(correctAmountSlider.value)
+            });
+
+            if (pitchCorrectToggle.checked) {
+                const rootName = NOTE_NAMES[parseInt(rootKeySelect.value, 10)];
+                const isHard = parseFloat(retuneSpeedSlider.value) >= 0.9;
+                pitchStatusBadge.textContent = `${isHard ? 'HARD AUTO-TUNE' : 'AUTO-TUNE'} ON (${rootName} ${scaleSelect.value.toUpperCase()})`;
+                pitchStatusBadge.className = isHard 
+                    ? "text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 font-bold glow-rose"
+                    : "text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold";
+            } else {
+                pitchStatusBadge.textContent = "AUTO-TUNE OFF (RAW VOCODER)";
+                pitchStatusBadge.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
+            }
+        }
+
+        function applyPreset(key) {
+            const p = ERGONOMICS_PRESETS[key];
+            if (!p) return;
+
+            formantScaleSlider.value = p.formant;
+            formantScaleVal.textContent = `${p.formant.toFixed(2)}x`;
+
+            pitchShiftSlider.value = p.pitch;
+            pitchShiftVal.textContent = `${p.pitch > 0 ? '+' : ''}${p.pitch} Semitones`;
+
+            spectralTiltSlider.value = p.tilt;
+            spectralTiltVal.textContent = `${p.tilt > 0 ? '+' : ''}${p.tilt.toFixed(1)}`;
+
+            tremoloSlider.value = p.tremolo;
+            tremoloVal.textContent = `${p.tremolo}%`;
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                if (btn.dataset.preset === key) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+
+            updateProcessorParams();
+        }
+
+        function resizeCanvases() {
+            const specRect = spectrumCanvas.parentElement.getBoundingClientRect();
+            spectrumCanvas.width = specRect.width;
+            spectrumCanvas.height = specRect.height;
+
+            const gramRect = spectrogramCanvas.parentElement.getBoundingClientRect();
+            spectrogramCanvas.width = gramRect.width;
+            spectrogramCanvas.height = gramRect.height;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        function renderLoop() {
+            if (!isRunning) return;
+
+            if (latestFrameData) {
+                const mags = latestFrameData.magnitudes;
+                const topIndices = latestFrameData.topIndices;
+                const activeCount = latestFrameData.activeCount;
+                const f0 = latestFrameData.f0;
+                const ratioR = latestFrameData.ratioR;
+
+                activeSinesDisp.textContent = `${activeCount} / ${topNSlider.value}`;
+                pitchRatioDisp.textContent = `${ratioR.toFixed(3)}x`;
+
+                // --- ピッチ HUD メーター更新 ---
+                if (f0 > 0) {
+                    f0Disp.textContent = `${f0.toFixed(1)} Hz`;
+
+                    const exactMIDI = 12 * Math.log2(f0 / 440) + 69;
+                    const targetMIDI = Math.round(exactMIDI);
+                    const noteIdx = ((targetMIDI % 12) + 12) % 12;
+                    const octave = Math.floor(targetMIDI / 12) - 1;
+                    const targetFreq = 440 * Math.pow(2, (targetMIDI - 69) / 12);
+
+                    const centsError = (exactMIDI - targetMIDI) * 100;
+
+                    detectedNoteDisp.textContent = `${NOTE_NAMES[noteIdx]}${octave}`;
+                    targetFreqDisp.textContent = `${targetFreq.toFixed(1)} Hz Target`;
+                    centsDisp.textContent = `${centsError > 0 ? '+' : ''}${centsError.toFixed(1)} cents`;
+
+                    const needlePct = Math.min(100, Math.max(0, 50 + centsError));
+                    centsNeedle.style.left = `${needlePct}%`;
+                } else {
+                    f0Disp.textContent = "NO VOICE";
+                    centsDisp.textContent = "0.0 cents";
+                    centsNeedle.style.left = "50%";
+                }
+
+                // --- Spectrum Canvas 描画 ---
+                const sw = spectrumCanvas.width;
+                const sh = spectrumCanvas.height;
+                specCtx.fillStyle = 'rgba(5, 7, 12, 0.4)';
+                specCtx.fillRect(0, 0, sw, sh);
+
+                const activeMap = new Uint8Array(mags.length);
+                for (let i = 0; i < topIndices.length; i++) {
+                    activeMap[topIndices[i]] = 1;
+                }
+
+                const numBins = mags.length;
+                let maxPeak = 0;
+
+                // 原音 FFT スペクトラム
+                specCtx.beginPath();
+                specCtx.strokeStyle = 'rgba(168, 85, 247, 0.25)';
+                specCtx.lineWidth = 1;
+
+                for (let i = 0; i < numBins; i++) {
+                    const x = (i / numBins) * sw;
+                    const val = mags[i];
+                    if (val > maxPeak) maxPeak = val;
+
+                    const normH = Math.min(sh, (Math.log10(val * 1000 + 1) / 3) * sh);
+                    const y = sh - normH;
+
+                    if (i === 0) specCtx.moveTo(x, y);
+                    else specCtx.lineTo(x, y);
+                }
+                specCtx.stroke();
+
+                // 変換後の加算波スペクトラム
+                for (let i = 0; i < topIndices.length; i++) {
+                    const binIdx = topIndices[i];
+                    const val = mags[binIdx];
+                    if (val < parseFloat(threshSlider.value)) continue;
+
+                    const shiftedBinIdx = binIdx * ratioR;
+                    const x = (shiftedBinIdx / numBins) * sw;
+                    const normH = Math.min(sh, (Math.log10(val * 1000 + 1) / 3) * sh);
+                    const y = sh - normH;
+
+                    specCtx.beginPath();
+                    specCtx.strokeStyle = parseFloat(retuneSpeedSlider.value) >= 0.9 ? '#f43f5e' : '#06b6d4';
+                    specCtx.lineWidth = 2;
+                    specCtx.moveTo(x, sh);
+                    specCtx.lineTo(x, y);
+                    specCtx.stroke();
+
+                    specCtx.beginPath();
+                    specCtx.fillStyle = '#a855f7';
+                    specCtx.arc(x, y, 2.5, 0, Math.PI * 2);
+                    specCtx.fill();
+                }
+
+                // Level Meter
+                const db = 20 * Math.log10(maxPeak + 1e-6);
+                const meterPct = Math.min(100, Math.max(0, ((db + 60) / 60) * 100));
+                meterBar.style.width = `${meterPct}%`;
+                peakLevelDb.textContent = isFinite(db) ? `${db.toFixed(1)} dB` : '-inf dB';
+
+                // --- Spectrogram Canvas 描画 ---
+                const gw = spectrogramCanvas.width;
+                const gh = spectrogramCanvas.height;
+
+                const imgData = gramCtx.getImageData(1, 0, gw - 1, gh);
+                gramCtx.putImageData(imgData, 0, 0);
+
+                const colImg = gramCtx.createImageData(1, gh);
+                for (let y = 0; y < gh; y++) {
+                    const binIdx = Math.floor(((gh - y) / gh) * numBins);
+                    const isTop = activeMap[binIdx];
+                    const mag = mags[binIdx];
+
+                    let r = 0, g = 0, b = 0;
+                    if (isTop && mag >= parseFloat(threshSlider.value)) {
+                        const intensity = Math.min(1.0, mag * 35);
+                        r = Math.floor(intensity * 244);
+                        g = Math.floor((1.0 - intensity) * 120 + 30);
+                        b = 247;
+                    } else {
+                        const intensity = Math.min(1.0, mag * 3);
+                        r = Math.floor(intensity * 30);
+                        g = Math.floor(intensity * 10);
+                        b = Math.floor(intensity * 50);
+                    }
+
+                    const pixelIdx = y * 4;
+                    colImg.data[pixelIdx + 0] = r;
+                    colImg.data[pixelIdx + 1] = g;
+                    colImg.data[pixelIdx + 2] = b;
+                    colImg.data[pixelIdx + 3] = 255;
+                }
+                gramCtx.putImageData(colImg, gw - 1, 0);
+            }
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            if (isRunning) stopAudio();
+            else initAudio();
+        });
+
+        // プリセットボタンイベント
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetBtn = e.currentTarget;
+                applyPreset(targetBtn.dataset.preset);
+            });
+        });
+
+        formantScaleSlider.addEventListener('input', (e) => {
+            formantScaleVal.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            updateProcessorParams();
+        });
+
+        pitchShiftSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            pitchShiftVal.textContent = `${val > 0 ? '+' : ''}${val} Semitones`;
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            updateProcessorParams();
+        });
+
+        spectralTiltSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            spectralTiltVal.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)}`;
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            updateProcessorParams();
+        });
+
+        tremoloSlider.addEventListener('input', (e) => {
+            tremoloVal.textContent = `${e.target.value}%`;
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            updateProcessorParams();
+        });
+
+        waveformSelect.addEventListener('change', updateProcessorParams);
+        pitchCorrectToggle.addEventListener('change', updateProcessorParams);
+        rootKeySelect.addEventListener('change', updateProcessorParams);
+        scaleSelect.addEventListener('change', updateProcessorParams);
+
+        retuneSpeedSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (val >= 0.99) retuneSpeedVal.textContent = "100% (Instant Snap)";
+            else if (val === 0) retuneSpeedVal.textContent = "0% (Smooth Natural)";
+            else retuneSpeedVal.textContent = `${Math.round(val * 100)}%`;
+            updateProcessorParams();
+        });
+
+        correctAmountSlider.addEventListener('input', (e) => {
+            correctAmountVal.textContent = `${Math.round(parseFloat(e.target.value) * 100)}%`;
+            updateProcessorParams();
+        });
+
+        qualitySlider.addEventListener('input', () => {
+            applyQualitySettings();
+            updateProcessorParams();
+        });
+
+        topNSlider.addEventListener('input', (e) => {
+            topNVal.textContent = `${e.target.value} Waves`;
+            updateProcessorParams();
+        });
+
+        threshSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            threshVal.textContent = val.toFixed(5);
+            updateProcessorParams();
+        });
+
+        dryWetSlider.addEventListener('input', (e) => {
+            dryWetVal.textContent = `${Math.round(parseFloat(e.target.value) * 100)}%`;
+            updateProcessorParams();
+        });
+
+        masterGainSlider.addEventListener('input', (e) => {
+            masterGainVal.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
+            updateProcessorParams();
+        });
+    </script>
+</body>
+</html>
