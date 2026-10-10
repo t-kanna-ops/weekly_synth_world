@@ -363,7 +363,7 @@
 <div class="container">
   <header>
     <h1>リアルタイム高音質ボイスチェンジャー</h1>
-    <p>位相補完STFT ✕ 自己相関オートチューン ✕ 人間工学モデル ✕ リアルタイム録音</p>
+    <p>YINピッチトラッキング ✕ スケール自動スナップ ✕ 人間工学モデル ✕ リアルタイム録音</p>
   </header>
 
   <!-- オーディオ操作ステーション -->
@@ -434,7 +434,7 @@
   <div class="card">
     <div class="card-title">
       <div class="toggle-row" style="width: 100%;">
-        <span>高精度ピッチコレクト (オートチューン)</span>
+        <span>最寄音階スナップ・ピッチコレクト (オートチューン)</span>
         <label class="switch">
           <input type="checkbox" id="paramPitchCorrectToggle" checked>
           <span class="slider-toggle"></span>
@@ -531,7 +531,7 @@
 
 <script>
 /**
- * AudioWorklet 内で動作する 高精度・平滑化 STFT Voice Processor
+ * AudioWorklet 内で動作する 高精度YINピッチ検出 ＆ 滑らかな周波数スナップボコーダー
  */
 const workletCode = `
 class HQVoiceProcessor extends AudioWorkletProcessor {
@@ -569,7 +569,7 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
     this.inputHead = 0;
     this.synthAccumulator = new Float32Array(this.FFT_SIZE * 2);
 
-    // 位相アキュムレータ（各ビンごとの滑らかな連続位相を維持）
+    // 各ビンの位相アキュムレータ
     this.binPhases = new Float32Array(this.FFT_SIZE / 2);
 
     // 窓関数
@@ -593,18 +593,15 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
   initWindow() {
     this.window = new Float32Array(this.FFT_SIZE);
     for (let i = 0; i < this.FFT_SIZE; i++) {
-      // Hanning Window
       this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / this.FFT_SIZE));
     }
   }
 
   updateQuality(q) {
     this.qualityFactor = q;
-    // クオリティに応じてホップサイズを調整 (75% 〜 超密オーバーラップ)
     this.HOP_SIZE = Math.max(128, Math.round(512 / q));
   }
 
-  // クールー・テューキー高速フーリエ変換 (Cooley-Tukey FFT)
   fft(real, imag) {
     const n = real.length;
     for (let i = 0; i < n; i++) {
@@ -638,33 +635,78 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
     }
   }
 
-  // 自己相関法（Autocorrelation）による高精度な基音(f0)検出
-  detectPitchAutocorrelation(buffer) {
-    const minLag = Math.floor(sampleRate / 500); // 500Hz
-    const maxLag = Math.floor(sampleRate / 70);  // 70Hz
-    let maxCorr = -1;
-    let bestLag = -1;
+  // 高精度 YIN ピッチ検出アルゴリズム (リアルタイムに変化する声の f0 を正確に追従)
+  detectPitchYIN(buffer) {
+    const threshold = 0.15;
+    const bufferSize = buffer.length;
+    const halfBuffer = Math.floor(bufferSize / 2);
+    const yinBuffer = new Float32Array(halfBuffer);
 
+    // 音量チェック
     let rms = 0;
-    for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
-    rms = Math.sqrt(rms / buffer.length);
-    if (rms < 0.005) return 0; // 無音判定
+    for (let i = 0; i < bufferSize; i++) {
+      rms += buffer[i] * buffer[i];
+    }
+    rms = Math.sqrt(rms / bufferSize);
+    if (rms < 0.008) return 0; // 無音時
 
-    for (let lag = minLag; lag <= maxLag; lag++) {
-      let corr = 0;
-      for (let i = 0; i < buffer.length - lag; i++) {
-        corr += buffer[i] * buffer[i + lag];
+    // 1. 差分二乗和 (Difference function)
+    for (let t = 1; t < halfBuffer; t++) {
+      let sum = 0;
+      for (let i = 0; i < halfBuffer; i++) {
+        const delta = buffer[i] - buffer[i + t];
+        sum += delta * delta;
       }
-      if (corr > maxCorr) {
-        maxCorr = corr;
-        bestLag = lag;
+      yinBuffer[t] = sum;
+    }
+
+    // 2. 累積平均正規化差分 (Cumulative Mean Normalized Difference)
+    yinBuffer[0] = 1;
+    let runningSum = 0;
+    for (let t = 1; t < halfBuffer; t++) {
+      runningSum += yinBuffer[t];
+      yinBuffer[t] *= t / (runningSum + 1e-6);
+    }
+
+    // 3. 閾値判定 & 最初の局所最小値を探す
+    let tau = -1;
+    const minTau = Math.floor(sampleRate / 600); // 最短ラグ (約600Hz)
+    const maxTau = Math.floor(sampleRate / 65);  // 最長ラグ (約65Hz)
+
+    for (let t = Math.max(2, minTau); t < Math.min(halfBuffer, maxTau); t++) {
+      if (yinBuffer[t] < threshold) {
+        while (t + 1 < halfBuffer && yinBuffer[t + 1] < yinBuffer[t]) {
+          t++;
+        }
+        tau = t;
+        break;
       }
     }
 
-    if (bestLag > 0 && maxCorr > 0.05) {
-      return sampleRate / bestLag;
+    if (tau === -1) {
+      let minVal = 1.0;
+      for (let t = Math.max(2, minTau); t < Math.min(halfBuffer, maxTau); t++) {
+        if (yinBuffer[t] < minVal) {
+          minVal = yinBuffer[t];
+          tau = t;
+        }
+      }
+      if (minVal > 0.45) return 0; // 信頼性なし
     }
-    return 0;
+
+    // 4. 放物線補間 (Parabolic Interpolation)
+    let betterTau = tau;
+    if (tau > 0 && tau < halfBuffer - 1) {
+      const s0 = yinBuffer[tau - 1];
+      const s1 = yinBuffer[tau];
+      const s2 = yinBuffer[tau + 1];
+      const denom = 2 * (2 * s1 - s2 - s0);
+      if (Math.abs(denom) > 1e-6) {
+        betterTau = tau + (s2 - s0) / denom;
+      }
+    }
+
+    return sampleRate / betterTau;
   }
 
   process(inputs, outputs) {
@@ -678,52 +720,55 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
 
       if (this.inputHead >= this.HOP_SIZE) {
         this.processFrame();
-        // リングバッファのシフト
         this.inputRingBuffer.copyWithin(0, this.HOP_SIZE);
         this.inputHead -= this.HOP_SIZE;
       }
 
-      // 出力バッファからサンプルを取り出し
       output[i] = this.synthAccumulator[0];
-      // アキュムレータのシフト
       this.synthAccumulator.copyWithin(0, 1);
       this.synthAccumulator[this.synthAccumulator.length - 1] = 0;
     }
 
-    // メインスレッド（録音キャプチャ用）に処理済み音声をストリーミング送信
     this.port.postMessage({ type: 'pcm', pcm: output });
-
     return true;
   }
 
   processFrame() {
     const numBins = this.FFT_SIZE / 2;
 
-    // 窓掛け
+    // 時間領域の生信号を取得して YIN ピッチ検出
+    const timeDomainSignal = new Float32Array(this.FFT_SIZE);
+    for (let i = 0; i < this.FFT_SIZE; i++) {
+      timeDomainSignal[i] = this.inputRingBuffer[i];
+    }
+
+    const f0 = this.detectPitchYIN(timeDomainSignal);
+    let autoTuneRatio = 1.0;
+
+    if (f0 > 65 && f0 < 600 && this.pitchCorrect) {
+      // その瞬間の f0 に最も近いスケール音階の周波数を算出
+      const targetFreq = this.snapToScale(f0, this.rootKey, this.scaleType);
+      const rawRatio = targetFreq / f0;
+      const targetRatio = 1.0 + (rawRatio - 1.0) * this.correctionAmount;
+
+      // Retune Speed に基づく即時スナップ / 平滑化（1.0の時即座にケロケロスナップ）
+      const alpha = Math.pow(this.retuneSpeed, 2) * 0.95 + 0.05;
+      this.smoothedPitchRatio += (targetRatio - this.smoothedPitchRatio) * alpha;
+      autoTuneRatio = this.smoothedPitchRatio;
+
+      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: targetFreq });
+    } else {
+      this.smoothedPitchRatio += (1.0 - this.smoothedPitchRatio) * 0.2;
+      autoTuneRatio = this.smoothedPitchRatio;
+      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: f0 });
+    }
+
+    // FFT 用に窓掛け
     for (let i = 0; i < this.FFT_SIZE; i++) {
       this.fftReal[i] = this.inputRingBuffer[i] * this.window[i];
       this.fftImag[i] = 0;
     }
 
-    // 高精度基音(f0)検出
-    const f0 = this.detectPitchAutocorrelation(this.fftReal);
-    let autoTuneRatio = 1.0;
-
-    if (f0 > 70 && f0 < 500 && this.pitchCorrect) {
-      const targetFreq = this.snapToScale(f0, this.rootKey, this.scaleType);
-      const rawRatio = targetFreq / f0;
-      const targetRatio = 1.0 + (rawRatio - 1.0) * this.correctionAmount;
-
-      // Retune Speed による平滑化
-      this.smoothedPitchRatio += (targetRatio - this.smoothedPitchRatio) * (0.05 + this.retuneSpeed * 0.95);
-      autoTuneRatio = this.smoothedPitchRatio;
-
-      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: targetFreq });
-    } else {
-      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: f0 });
-    }
-
-    // FFT 実行
     this.fft(this.fftReal, this.fftImag);
 
     const magnitudes = new Float32Array(numBins);
@@ -740,22 +785,18 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // 振幅の大きい順にソートして上位キービンを抽出（スパース符号化）
     bins.sort((a, b) => b.mag - a.mag);
     const activeBins = new Set(bins.slice(0, Math.min(this.sineCount, bins.length)).map(b => b.bin));
 
-    // 時間領域合成用バッファ（1フレーム分）
     const frameSynth = new Float32Array(this.FFT_SIZE);
     const totalPitchScale = this.pitchShift * autoTuneRatio;
 
-    // 各ビンごとの連続位相計算（フェーズボコーダー / Phase Accumulator）
     for (let k = 1; k < numBins; k++) {
       if (!activeBins.has(k)) continue;
 
       let mag = magnitudes[k] / (this.FFT_SIZE / 4);
       let origFreq = (k * sampleRate) / this.FFT_SIZE;
 
-      // フォルマント & 人間工学調整
       let targetFreq = origFreq * totalPitchScale;
       if (targetFreq < 300) mag *= this.resonance;
       if (targetFreq > 2000) mag *= this.clarity;
@@ -764,7 +805,6 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
         targetFreq += Math.sin(k + sampleRate) * this.age * 5.0;
       }
 
-      // サンプル単位で位相を更新しながら加算合成
       const phaseInc = (2 * Math.PI * targetFreq) / sampleRate;
       let phase = this.binPhases[k];
 
@@ -792,66 +832,68 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
       this.binPhases[k] = phase;
     }
 
-    // SMS ノイズ残差の付加
     if (this.noiseBlend > 0) {
       for (let n = 0; n < this.FFT_SIZE; n++) {
         frameSynth[n] += (Math.random() * 2 - 1) * 0.005 * this.noiseBlend;
       }
     }
 
-    // 合成窓をかけて Overlap-Add バッファに加算（グリッチノイズの完璧な除去）
     const normFactor = (this.HOP_SIZE / this.FFT_SIZE) * 1.5;
     for (let n = 0; n < this.FFT_SIZE; n++) {
       this.synthAccumulator[n] += frameSynth[n] * this.window[n] * normFactor;
     }
 
-    // スペクトログラム描画用データの送信
     if (Math.random() < 0.25) {
       this.port.postMessage({ type: 'spectrogram', mags: magnitudes.slice(0, 128) });
     }
   }
 
+  // 検出された f0 から最も距離が近いスケール音階(Note)の目標周波数(Hz)にスナップ
   snapToScale(freq, rootKey, scaleType) {
+    if (freq <= 0) return 440;
+
     const midi = 69 + 12 * Math.log2(freq / 440);
-    const roundedMidi = Math.round(midi);
-    const noteInOctave = (roundedMidi - rootKey + 120) % 12;
 
     const scales = {
-      chromatic: [0,1,2,3,4,5,6,7,8,9,10,11],
-      major: [0,2,4,5,7,9,11],
-      minor: [0,2,3,5,7,8,10],
-      pentatonic: [0,2,4,7,9]
+      chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      major:     [0, 2, 4, 5, 7, 9, 11],
+      minor:     [0, 2, 3, 5, 7, 8, 10],
+      pentatonic:[0, 2, 4, 7, 9]
     };
 
     const allowedNotes = scales[scaleType] || scales.chromatic;
-    let minDiff = Infinity;
-    let bestNote = noteInOctave;
+    const roundedMidi = Math.round(midi);
 
-    for (let note of allowedNotes) {
-      let diff = Math.abs(noteInOctave - note);
-      if (diff > 6) diff = 12 - diff;
-      if (diff < minDiff) {
-        minDiff = diff;
-        bestNote = note;
+    let minDiff = Infinity;
+    let bestMidi = roundedMidi;
+
+    // 近隣の半音の中で、選択されたスケールに含まれる最も近い音階を探索
+    for (let delta = -12; delta <= 12; delta++) {
+      const candidateMidi = roundedMidi + delta;
+      const noteInOctave = (candidateMidi - rootKey + 1200) % 12;
+      if (allowedNotes.includes(noteInOctave)) {
+        const diff = Math.abs(midi - candidateMidi);
+        if (diff < minDiff) {
+          minDiff = diff;
+          bestMidi = candidateMidi;
+        }
       }
     }
 
-    const correctedMidi = roundedMidi + (bestNote - noteInOctave);
-    return 440 * Math.pow(2, (correctedMidi - 69) / 12);
+    return 440 * Math.pow(2, (bestMidi - 69) / 12);
   }
 }
 
 registerProcessor('hq-voice-processor', HQVoiceProcessor);
 `;
 
-// アプリケーション UI と メインオーディオ管理
+// UI コントロール & Web Audio 統合スクリプト
 let audioCtx = null;
 let workletNode = null;
 let micStream = null;
 let loopSourceNode = null;
 let recordedMicBuffer = null;
 
-// 録音PCMキャプチャ用バッファ（WAV保存用）
 let capturedPCMChunks = [];
 let isRecording = false;
 let isLooping = false;
@@ -916,7 +958,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 処理音声のリアルタイム録音
   btnRecord.addEventListener('click', () => {
     if (!isRecording) {
       capturedPCMChunks = [];
@@ -937,7 +978,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // マイク音源のループ再生テスト
   btnPlayLoop.addEventListener('click', async () => {
     if (!micStream) return;
     if (!isLooping) {
@@ -971,7 +1011,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // WAV書き出し
   btnExport.addEventListener('click', () => {
     if (capturedPCMChunks.length === 0) return;
 
@@ -1089,16 +1128,17 @@ function updateHUD(f0, targetFreq) {
     return;
   }
 
-  const midi = 69 + 12 * Math.log2(f0 / 440);
+  const midi = 69 + 12 * Math.log2(targetFreq / 440);
   const noteIdx = Math.round(midi) % 12;
   const noteName = NOTE_NAMES[(noteIdx + 12) % 12];
   const octave = Math.floor(Math.round(midi) / 12) - 1;
 
-  const cents = (midi - Math.round(midi)) * 100;
+  const inputMidi = 69 + 12 * Math.log2(f0 / 440);
+  const cents = (inputMidi - Math.round(inputMidi)) * 100;
   const pointerPos = Math.max(0, Math.min(100, 50 + cents));
 
   document.getElementById('hudNote').textContent = `${noteName}${octave}`;
-  document.getElementById('hudFreq').textContent = `${f0.toFixed(1)} Hz`;
+  document.getElementById('hudFreq').textContent = `${f0.toFixed(1)} Hz ➔ ${targetFreq.toFixed(1)} Hz`;
   document.getElementById('hudPointer').style.left = `${pointerPos}%`;
 }
 
@@ -1128,7 +1168,6 @@ function drawSpectrogram(mags) {
   }
 }
 
-// PCM から 16-bit PCM WAV Blob を生成
 function pcmToWav(pcmArray, sampleRate) {
   const numOfChan = 1;
   const length = pcmArray.length * 2 + 44;
@@ -1144,7 +1183,7 @@ function pcmToWav(pcmArray, sampleRate) {
   setUint32(0x45564157); // "WAVE"
   setUint32(0x20746d66); // "fmt "
   setUint32(16);
-  setUint16(1);          // PCM format
+  setUint16(1);          // PCM
   setUint16(numOfChan);
   setUint32(sampleRate);
   setUint32(sampleRate * 2);
