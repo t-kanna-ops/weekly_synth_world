@@ -7,7 +7,7 @@
   <!-- ======================================================= -->
   <!-- 🎵 Web Synth ポータル用メタデータ (ここを追加してください) -->
   <!-- ======================================================= -->
-  <meta name="synth-title" content="Voice Coder（実験用アプリ）">
+  <meta name="synth-title" content="Voice Code Modulator（実験用アプリ）">
   <meta name="synth-description" content="実験用なのでちょっと使い方が難しいです。マイクから入力した音声をFFT解析し、全てをサイン波などの波形で加算合成し再現、変調によるボイチェンをします。">
   <meta name="synth-tags" content="Vocoder, FFT, Analyze">
   <meta name="synth-color" content="gray"> <!-- 選択肢: pink, cyan, gold, purple, emerald -->
@@ -15,9 +15,8 @@
   <meta name="synth-symbol-type" content="kanji"> <!-- kanji または emoji -->
   <meta name="synth-number" content="#04"> <!-- ナンバリング（省略可） -->
   <!-- ======================================================= -->
-    
-    <title>Human Ergonomics Voice Transformer & Phase Vocoder</title>
-    <!-- Tailwind CSS CDN for DAW UI Layout -->
+
+    <title>Voice Code Modulator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -50,7 +49,7 @@
             user-select: none;
         }
 
-        /* サイバーパンク風スライダー装飾 */
+        /* Cyberpunk Styled Custom Range Inputs */
         input[type=range] {
             -webkit-appearance: none;
             background: #0f172a;
@@ -75,7 +74,7 @@
             box-shadow: 0 0 15px rgba(34, 211, 238, 1);
         }
 
-        /* フォルマント専用パープルスライダー */
+        /* Formant Specific Purple Range Input */
         input[type=range].formant-slider::-webkit-slider-thumb {
             background: #a855f7;
             box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
@@ -86,7 +85,7 @@
             box-shadow: 0 0 15px rgba(192, 132, 252, 1);
         }
 
-        /* ケロケロ度専用ローズスライダー */
+        /* Retune Speed Rose Range Input */
         input[type=range].retune-slider::-webkit-slider-thumb {
             background: #f43f5e;
             box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
@@ -123,7 +122,7 @@
                     HUMAN ERGONOMICS VOICE TRANSFORMER
                     <span id="qualityBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">QUALITY 1.0x (FFT 2048)</span>
                 </h1>
-                <p class="text-xs text-gray-400">リアルタイム人間工学フォルマント変換・ピッチシフト・ケロケロ自動補正</p>
+                <p class="text-xs text-gray-400">リアルタイム音声変換・録音ループ再生・オートチューン・WAV書き出し</p>
             </div>
         </div>
 
@@ -134,9 +133,44 @@
         </button>
     </header>
 
+    <section class="max-w-7xl w-full mx-auto mb-3 bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-2xl flex flex-col md:flex-row justify-between items-center gap-3">
+        <!-- Source Toggle -->
+        <div class="flex items-center gap-2 bg-black/60 p-1.5 rounded-lg border border-gray-800 w-full md:w-auto justify-center">
+            <span class="text-xs font-bold text-gray-400 pl-2">入力ソース:</span>
+            <button id="srcMicBtn" class="px-3 py-1.5 rounded text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500 shadow-sm">
+                🎙️ マイク入力
+            </button>
+            <button id="srcRecBtn" class="px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300">
+                🔄 録音ループ再生
+            </button>
+        </div>
+
+        <!-- Recording & Playback Control Buttons -->
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center">
+            <button id="recStartBtn" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-rose-600/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+                録音開始
+            </button>
+            <button id="recStopBtn" disabled class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs flex items-center gap-1.5 transition-all border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
+                ⏹️ 録音停止
+            </button>
+            <button id="loopPlayBtn" disabled class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-purple-600/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                ▶️ ループ再生
+            </button>
+            <button id="exportWavBtn" disabled class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed">
+                💾 WAV書き出し
+            </button>
+        </div>
+
+        <!-- Recording Status Bar -->
+        <div class="flex items-center gap-3 bg-black/60 px-3 py-1.5 rounded-lg border border-gray-800 w-full md:w-auto justify-between md:justify-end">
+            <span id="recStatusText" class="text-xs font-mono text-gray-400">Status: 待機中</span>
+            <span id="recTimeText" class="text-xs font-mono font-bold text-cyan-400">00:00.0</span>
+        </div>
+    </section>
+
     <main class="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
         
-        <!-- 左側エリア: Pitch HUD & Spectrogram Canvases -->
         <section class="lg:col-span-7 flex flex-col gap-3">
             
             <!-- AUTO-TUNE PITCH & FORMANT HUD -->
@@ -208,7 +242,6 @@
             </div>
         </section>
 
-        <!-- 右側エリア: 人間工学ボイスチェンジャー & 音声合成パラメータ -->
         <section class="lg:col-span-5 flex flex-col gap-3">
             
             <!-- PANEL 1: ERGONOMICS VOICE TRANSFORMER -->
@@ -220,7 +253,7 @@
                     <span class="text-[10px] font-mono text-purple-300">Vocal Tract Model</span>
                 </div>
 
-                <!-- 6つの人間工学プリセットボタン -->
+                <!-- 6 Human Ergonomics Presets -->
                 <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                     <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="male">
                         <span class="text-base">👨</span>
@@ -248,17 +281,17 @@
                     </button>
                 </div>
 
-                <!-- フォルマントシフト (0.50x 〜 2.00x) -->
+                <!-- Formant Shift (0.50x to 2.00x) -->
                 <div class="flex flex-col gap-1 mt-1">
                     <div class="flex justify-between text-xs">
                         <label for="formantScaleSlider" class="font-bold text-purple-300">Formant Shift (声道長スケーリング)</label>
                         <span id="formantScaleVal" class="font-mono text-purple-400 font-bold">1.00x (Standard)</span>
                     </div>
                     <input type="range" id="formantScaleSlider" min="0.5" max="2.0" value="1.0" step="0.01" class="w-full formant-slider">
-                    <p class="text-[10px] text-gray-400">声道の長さを伸縮。1.0未満で喉を太く(男声化)、1.0超で短縮(女声・子供化)。</p>
+                    <p class="text-[10px] text-gray-400">1.0未満で太い骨格(男性風)、1.0超で短い声道(女性・子供風)。</p>
                 </div>
 
-                <!-- ピッチオフセットシフト (-12 〜 +12 半音) -->
+                <!-- Pitch Shift (-12 to +12 Semitones) -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="pitchShiftSlider" class="font-bold text-cyan-300">Pitch Shift (声帯ピッチシフト)</label>
@@ -267,24 +300,22 @@
                     <input type="range" id="pitchShiftSlider" min="-12" max="12" value="0" step="1" class="w-full">
                 </div>
 
-                <!-- スペクトラルチルト / 年齢質感 (-5.0 〜 +5.0) -->
+                <!-- Spectral Tilt (-5.0 to +5.0) -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="spectralTiltSlider" class="text-gray-300">Spectral Tilt / Age Character (年齢質感)</label>
                         <span id="spectralTiltVal" class="font-mono text-yellow-400 font-bold">0.0 (Neutral)</span>
                     </div>
                     <input type="range" id="spectralTiltSlider" min="-5.0" max="5.0" value="0.0" step="0.1" class="w-full">
-                    <p class="text-[10px] text-gray-400">高域傾斜。プラスで若々しく明瞭、マイナスで加齢・籠もった声質を表現。</p>
                 </div>
 
-                <!-- 加齢トリモロ・ビブラート (0% 〜 100%) -->
+                <!-- Age Tremolo / Vibrato (0% to 100%) -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="tremoloSlider" class="text-gray-300">Age Tremolo / Vibrato (神経性震え)</label>
                         <span id="tremoloVal" class="font-mono text-rose-400 font-bold">0%</span>
                     </div>
                     <input type="range" id="tremoloSlider" min="0" max="100" value="0" step="1" class="w-full">
-                    <p class="text-[10px] text-gray-400">老年声特有の約4.2Hz不随意筋振幅・周波数モジュレーションを付加。</p>
                 </div>
             </div>
 
@@ -300,7 +331,7 @@
                     </label>
                 </div>
 
-                <!-- 合成波形選択 (Sine / Triangle / Square / Sawtooth) -->
+                <!-- Synth Waveform Selection -->
                 <div class="flex flex-col gap-1">
                     <label for="waveformSelect" class="text-xs font-medium text-gray-300">Synthesizer Waveform (合成波形)</label>
                     <select id="waveformSelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
@@ -311,7 +342,7 @@
                     </select>
                 </div>
 
-                <!-- スケール & ルートキー選択 -->
+                <!-- Root Key & Scale -->
                 <div class="grid grid-cols-12 gap-2">
                     <div class="col-span-4 flex flex-col gap-1">
                         <label for="rootKeySelect" class="text-xs font-medium text-gray-300">Root Key</label>
@@ -342,7 +373,7 @@
                     </div>
                 </div>
 
-                <!-- ケロケロ補正速度 (Retune Speed) -->
+                <!-- Retune Speed -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="retuneSpeedSlider" class="font-bold text-rose-400">Retune Speed (ケロケロ度)</label>
@@ -351,6 +382,7 @@
                     <input type="range" id="retuneSpeedSlider" min="0" max="1" value="1.0" step="0.01" class="w-full retune-slider">
                 </div>
 
+                <!-- Correction Amount -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="correctAmountSlider" class="text-gray-300">Correction Amount (補正強度)</label>
@@ -366,7 +398,7 @@
                     🎛️ DSP RESOLUTION & FINE CONTROLS
                 </h3>
 
-                <!-- 音質スライダー (0.5x 〜 2.0x) -->
+                <!-- Quality Factor -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="qualitySlider" class="font-bold text-cyan-300">Quality Factor (処理解像度)</label>
@@ -375,7 +407,7 @@
                     <input type="range" id="qualitySlider" min="0.5" max="2.0" value="1.0" step="0.5" class="w-full">
                 </div>
 
-                <!-- サイン波上限本数 (16〜1024本) -->
+                <!-- Max Oscillators -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="topNSlider" class="font-medium text-pink-300">Max Waves (16〜1024本)</label>
@@ -384,17 +416,16 @@
                     <input type="range" id="topNSlider" min="16" max="1024" value="512" step="16" class="w-full">
                 </div>
 
-                <!-- ノイズスレッショルド (0.00000 〜 0.00100) -->
+                <!-- Noise Threshold (Fine Granular) -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-xs">
                         <label for="threshSlider" class="text-gray-300">Noise Threshold (ノイズ除去)</label>
-                        <span id="threshVal" class="font-mono text-yellow-400 font-bold">0.00000 (Disabled)</span>
+                        <span id="threshVal" class="font-mono text-yellow-400 font-bold">0.000000 (Disabled)</span>
                     </div>
-                    <input type="range" id="threshSlider" min="0.00000" max="0.00100" value="0.00000" step="0.00001" class="w-full">
-                    <p class="text-[10px] text-gray-400">0.00000〜0.00100の微小単位でノイズゲート閾値を調整。</p>
+                    <input type="range" id="threshSlider" min="0.000000" max="0.001000" value="0.000000" step="0.000001" class="w-full">
                 </div>
 
-                <!-- Mix & Gain Controls -->
+                <!-- Mix & Volume -->
                 <div class="grid grid-cols-2 gap-3 pt-1">
                     <div class="flex flex-col gap-1">
                         <div class="flex justify-between text-xs">
@@ -424,7 +455,7 @@
                     </div>
                 </div>
 
-                <!-- VU Level Meter -->
+                <!-- Level Meter -->
                 <div class="flex flex-col gap-1">
                     <div class="flex justify-between text-[10px] text-gray-400">
                         <span>PEAK OUTPUT LEVEL</span>
@@ -440,11 +471,8 @@
 
     <script>
         /**
-         * インライン AudioWorkletProcessor コード (Blob URL経由で別スレッド実行)
-         * - Cooley-Tukey 高速FFT
-         * - Phase Vocoder 瞬時周波数推定
-         * - 人間工学モデル (フォルマント伸縮, ピッチシフト, スペクトラルチルト, 加齢トリモロLFO)
-         * - 合成波形 (サイン波, 三角波, 矩形波, 鋸歯状波) オシレータバンク
+         * Inline AudioWorkletProcessor Code
+         * Fast Cooley-Tukey FFT, Phase Vocoder, Formant Shifter, Hard Auto-Tune, and Additive Wave Synthesizer
          */
         const workletProcessorCode = `
             class HumanErgonomicsVocoderProcessor extends AudioWorkletProcessor {
@@ -454,7 +482,6 @@
                     this.hopSize = 512;
                     this.initBuffers();
 
-                    // パラメータ初期値
                     this.maxTopN = 512;
                     this.dryWet = 1.0;
                     this.inputGain = 1.0;
@@ -462,13 +489,11 @@
                     this.threshold = 0.0;
                     this.waveform = 'sine';
 
-                    // 人間工学パラメータ
                     this.formantScale = 1.0;
                     this.pitchShiftSemitones = 0;
                     this.spectralTilt = 0.0;
                     this.tremoloAmount = 0.0;
 
-                    // ピッチ補正パラメータ
                     this.pitchCorrectEnabled = true;
                     this.rootKey = 0;
                     this.selectedScale = 'chromatic';
@@ -476,7 +501,7 @@
                     this.correctAmount = 1.0;
 
                     this.currentRatioR = 1.0;
-                    this.lfoPhase = 0.0; // 4.2Hz 不随意筋振動用 LFO
+                    this.lfoPhase = 0.0;
 
                     this.port.onmessage = (e) => {
                         const d = e.data;
@@ -515,7 +540,6 @@
                     this.real = new Float32Array(this.fftSize);
                     this.imag = new Float32Array(this.fftSize);
 
-                    // ブラックマン窓 (Blackman Window)
                     this.window = new Float32Array(this.fftSize);
                     const a0 = 0.42, a1 = 0.5, a2 = 0.08;
                     for (let i = 0; i < this.fftSize; i++) {
@@ -526,7 +550,6 @@
                     this.magnitudes = new Float32Array(this.numBins);
                     this.instFrequencies = new Float32Array(this.numBins);
 
-                    // オシレータバッファ
                     this.oscPhase = new Float32Array(this.numBins);
                     this.currentAmp = new Float32Array(this.numBins);
                     this.targetAmp = new Float32Array(this.numBins);
@@ -596,9 +619,6 @@
                     }
                 }
 
-                /**
-                 * ヴォーカル基音 (f0) 検出 (65Hz ~ 950Hz)
-                 */
                 detectFundamentalFrequency() {
                     const binWidth = sampleRate / this.fftSize;
                     const minBin = Math.max(1, Math.floor(65 / binWidth));
@@ -627,9 +647,6 @@
                     return this.instFrequencies[bestBin];
                 }
 
-                /**
-                 * ハード・オートチューン目標音階へのピッチ比算出
-                 */
                 calculateTargetPitchRatio(f0) {
                     if (f0 <= 0 || !this.pitchCorrectEnabled) return 1.0;
 
@@ -663,9 +680,6 @@
                     return Math.max(0.5, Math.min(2.0, 1.0 + (rawRatio - 1.0) * this.correctAmount));
                 }
 
-                /**
-                 * 振幅の線形補間（フォルマント envelope 参照用）
-                 */
                 getInterpolatedMagnitude(freq) {
                     const binWidth = sampleRate / this.fftSize;
                     const floatBin = freq / binWidth;
@@ -679,9 +693,6 @@
                     return this.magnitudes[b0] * (1.0 - frac) + this.magnitudes[b1] * frac;
                 }
 
-                /**
-                 * STFT & 人間工学フォルマント・ピッチ・波形変換解析
-                 */
                 analyzeFrame() {
                     for (let i = 0; i < this.fftSize; i++) {
                         const idx = (this.inputWritePos - this.fftSize + i + this.fftSize) % this.fftSize;
@@ -715,7 +726,6 @@
                         this.instFrequencies[k] = instFreq;
                     }
 
-                    // 1. オートチューン目標比率
                     const f0 = this.detectFundamentalFrequency();
                     const targetAutoRatio = this.calculateTargetPitchRatio(f0);
 
@@ -726,16 +736,10 @@
                         this.currentRatioR += (targetAutoRatio - this.currentRatioR) * factor;
                     }
 
-                    // 2. 声帯ピッチシフト比率 (Semitones)
                     const userPitchRatio = Math.pow(2, this.pitchShiftSemitones / 12);
-                    
-                    // 総合ピッチ倍率 (P)
-                    const totalPitchRatio = this.currentRatioR * userPitchRatio;
-
-                    // 3. フォルマントシフト倍率 (F)
+                    const totalPitchRatio = (this.pitchCorrectEnabled ? this.currentRatioR : 1.0) * userPitchRatio;
                     const formantF = Math.max(0.5, Math.min(2.0, this.formantScale));
 
-                    // 振幅順ソート
                     const mags = this.magnitudes;
                     this.binIndices.sort((a, b) => mags[b] - mags[a]);
 
@@ -750,17 +754,11 @@
 
                         if (origMag >= this.threshold) {
                             const origFreq = this.instFrequencies[binIdx];
-                            
-                            // 合成周波数 = 原音周波数 * 総合ピッチ倍率
                             const synthFreq = Math.min(sampleRate / 2, origFreq * totalPitchRatio);
-
-                            // フォルマント構造維持のための Envelope Lookup Frequency = synthFreq / formantF
                             const lookupFreq = synthFreq / formantF;
 
-                            // フォルマント移動後の振幅を取得
                             let transformedMag = this.getInterpolatedMagnitude(lookupFreq);
 
-                            // 4. Spectral Tilt (高域傾斜/年齢質感) 適用
                             if (this.spectralTilt !== 0) {
                                 const normFreq = Math.max(100, synthFreq) / 1000.0;
                                 const tiltFactor = Math.pow(normFreq, this.spectralTilt / 3.5);
@@ -773,13 +771,11 @@
                         }
                     }
 
-                    // 補間ステップ
                     for (let k = 0; k < this.numBins; k++) {
                         this.stepAmp[k] = (this.targetAmp[k] - this.currentAmp[k]) / this.hopSize;
                         this.stepFreq[k] = (this.targetFreq[k] - this.currentFreq[k]) / this.hopSize;
                     }
 
-                    // GUIデータ送信
                     this.port.postMessage({
                         type: 'frameData',
                         magnitudes: this.magnitudes,
@@ -799,7 +795,6 @@
                     const outputChannel = output[0];
                     const numSamples = outputChannel.length;
 
-                    // 加齢不随意筋トレモロ/ビブラート (約 4.2Hz LFO)
                     const lfoStep = (2.0 * Math.PI * 4.2) / sampleRate;
 
                     for (let i = 0; i < numSamples; i++) {
@@ -821,7 +816,6 @@
                         const tremoloGainMod = 1.0 + (this.tremoloAmount / 100.0) * 0.35 * lfoSin;
                         const vibratoFreqMod = 1.0 + (this.tremoloAmount / 100.0) * 0.015 * lfoSin;
 
-                        // 加算合成オシレータバンク
                         let synthSample = 0.0;
                         const invFs = 1.0 / sampleRate;
 
@@ -842,7 +836,6 @@
                                 const phi = this.oscPhase[k];
                                 let oscVal = 0.0;
 
-                                // 波形ジェネレータ
                                 if (this.waveform === 'sine') {
                                     oscVal = Math.sin(phi);
                                 } else if (this.waveform === 'triangle') {
@@ -858,7 +851,7 @@
                         }
 
                         const blendedSample = (inSample * (1.0 - this.dryWet) + synthSample * this.dryWet) * this.masterGain;
-                        outputChannel[i] = Math.tanh(blendedSample); // ソフトクリッピング
+                        outputChannel[i] = Math.tanh(blendedSample);
 
                         if (output.length > 1) {
                             output[1][i] = outputChannel[i];
@@ -875,12 +868,22 @@
         let audioCtx = null;
         let micStream = null;
         let micSource = null;
+        let loopSourceNode = null;
         let vocoderNode = null;
         let isRunning = false;
 
+        // Recording & Loop State
+        let inputMode = 'mic'; // 'mic' | 'rec'
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordedAudioBuffer = null;
+        let isRecording = false;
+        let isLoopPlaying = false;
+        let recStartTime = 0;
+        let recTimerInterval = null;
+
         const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-        // 人間工学 6 プリセット定義
         const ERGONOMICS_PRESETS = {
             male:     { formant: 0.88, pitch: -4, tilt: -0.5, tremolo: 0 },
             female:   { formant: 1.18, pitch: 4,  tilt: 1.0,  tremolo: 0 },
@@ -890,13 +893,24 @@
             oldwoman: { formant: 1.05, pitch: 1,  tilt: -2.0, tremolo: 40 }
         };
 
-        // DOM 参照
+        // DOM Element References
         const toggleBtn = document.getElementById('toggleAudioBtn');
         const playIcon = document.getElementById('playIcon');
         const stopIcon = document.getElementById('stopIcon');
         const btnText = document.getElementById('btnText');
         const qualityBadge = document.getElementById('qualityBadge');
 
+        // Recording & Export DOM
+        const srcMicBtn = document.getElementById('srcMicBtn');
+        const srcRecBtn = document.getElementById('srcRecBtn');
+        const recStartBtn = document.getElementById('recStartBtn');
+        const recStopBtn = document.getElementById('recStopBtn');
+        const loopPlayBtn = document.getElementById('loopPlayBtn');
+        const exportWavBtn = document.getElementById('exportWavBtn');
+        const recStatusText = document.getElementById('recStatusText');
+        const recTimeText = document.getElementById('recTimeText');
+
+        // Pitch Monitor DOM
         const pitchStatusBadge = document.getElementById('pitchStatusBadge');
         const detectedNoteDisp = document.getElementById('detectedNoteDisp');
         const targetFreqDisp = document.getElementById('targetFreqDisp');
@@ -904,7 +918,7 @@
         const centsDisp = document.getElementById('centsDisp');
         const centsNeedle = document.getElementById('centsNeedle');
 
-        // Human Ergonomics Controls
+        // Controls DOM
         const formantScaleSlider = document.getElementById('formantScaleSlider');
         const formantScaleVal = document.getElementById('formantScaleVal');
         const pitchShiftSlider = document.getElementById('pitchShiftSlider');
@@ -914,7 +928,6 @@
         const tremoloSlider = document.getElementById('tremoloSlider');
         const tremoloVal = document.getElementById('tremoloVal');
 
-        // Waveform & Pitch Controls
         const waveformSelect = document.getElementById('waveformSelect');
         const pitchCorrectToggle = document.getElementById('pitchCorrectToggle');
         const rootKeySelect = document.getElementById('rootKeySelect');
@@ -924,7 +937,6 @@
         const correctAmountSlider = document.getElementById('correctAmountSlider');
         const correctAmountVal = document.getElementById('correctAmountVal');
 
-        // DSP Resolution & Mix Controls
         const qualitySlider = document.getElementById('qualitySlider');
         const qualityVal = document.getElementById('qualityVal');
         const topNSlider = document.getElementById('topNSlider');
@@ -981,7 +993,9 @@
                     }
                 };
 
-                micSource.connect(vocoderNode);
+                // Connect initial source mode
+                connectSourceMode();
+
                 vocoderNode.connect(audioCtx.destination);
 
                 isRunning = true;
@@ -995,10 +1009,60 @@
             }
         }
 
+        function connectSourceMode() {
+            if (!vocoderNode) return;
+
+            if (micSource) { try { micSource.disconnect(); } catch(e){} }
+            if (loopSourceNode) { try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){} loopSourceNode = null; }
+
+            if (inputMode === 'mic') {
+                if (micSource) micSource.connect(vocoderNode);
+                srcMicBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500 shadow-sm";
+                srcRecBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300";
+            } else if (inputMode === 'rec') {
+                srcMicBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300";
+                srcRecBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-purple-500/20 text-purple-300 border border-purple-500 shadow-sm";
+
+                if (recordedAudioBuffer && audioCtx) {
+                    startLoopPlayback();
+                }
+            }
+        }
+
+        function startLoopPlayback() {
+            if (!audioCtx || !recordedAudioBuffer || !vocoderNode) return;
+            if (loopSourceNode) {
+                try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){}
+            }
+
+            loopSourceNode = audioCtx.createBufferSource();
+            loopSourceNode.buffer = recordedAudioBuffer;
+            loopSourceNode.loop = true;
+            loopSourceNode.connect(vocoderNode);
+            loopSourceNode.start();
+            isLoopPlaying = true;
+            loopPlayBtn.textContent = "⏸️ ループ一時停止";
+            recStatusText.textContent = "Status: ループ再生中";
+        }
+
+        function stopLoopPlayback() {
+            if (loopSourceNode) {
+                try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){}
+                loopSourceNode = null;
+            }
+            isLoopPlaying = false;
+            loopPlayBtn.textContent = "▶️ ループ再生";
+            recStatusText.textContent = "Status: ループ停止";
+        }
+
         function stopAudio() {
             if (micStream) {
                 micStream.getTracks().forEach(track => track.stop());
                 micStream = null;
+            }
+            if (loopSourceNode) {
+                try { loopSourceNode.stop(); } catch(e){}
+                loopSourceNode = null;
             }
             if (audioCtx) {
                 audioCtx.close();
@@ -1006,6 +1070,191 @@
             }
             isRunning = false;
             updateUIState();
+        }
+
+        async function startRecording() {
+            if (!audioCtx) {
+                await initAudio();
+            }
+            if (!micStream) return;
+
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(micStream);
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                const arrayBuffer = await blob.arrayBuffer();
+                recordedAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+                recStatusText.textContent = `Status: 録音完了 (${recordedAudioBuffer.duration.toFixed(1)}s)`;
+                loopPlayBtn.disabled = false;
+                exportWavBtn.disabled = false;
+                
+                // Auto switch to Recorded Loop mode for instant playback & parameter tweaking
+                inputMode = 'rec';
+                connectSourceMode();
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            recStartBtn.disabled = true;
+            recStopBtn.disabled = false;
+            recStatusText.textContent = "Status: 録音中...";
+
+            recStartTime = Date.now();
+            recTimerInterval = setInterval(() => {
+                const elapsed = (Date.now() - recStartTime) / 1000;
+                recTimeText.textContent = formatTime(elapsed);
+            }, 100);
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                recStartBtn.disabled = false;
+                recStopBtn.disabled = true;
+                clearInterval(recTimerInterval);
+            }
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = (sec % 60).toFixed(1);
+            return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        /**
+         * Render Transformed Audio to WAV file using OfflineAudioContext & AudioWorklet
+         * (Respects active Pitch Correction Toggle setting)
+         */
+        async function exportProcessedWav() {
+            if (!recordedAudioBuffer) {
+                alert("録音データが存在しません。先に録音を行ってください。");
+                return;
+            }
+
+            exportWavBtn.disabled = true;
+            exportWavBtn.textContent = "⏳ レンダリング中...";
+
+            try {
+                const sampleRate = recordedAudioBuffer.sampleRate;
+                const length = recordedAudioBuffer.length;
+                const offlineCtx = new OfflineAudioContext(1, length, sampleRate);
+
+                // Add AudioWorklet module to offline context
+                const blob = new Blob([workletProcessorCode], { type: 'application/javascript' });
+                const workletUrl = URL.createObjectURL(blob);
+                await offlineCtx.audioWorklet.addModule(workletUrl);
+                URL.revokeObjectURL(workletUrl);
+
+                const offlineSource = offlineCtx.createBufferSource();
+                offlineSource.buffer = recordedAudioBuffer;
+
+                const offlineVocoder = new AudioWorkletNode(offlineCtx, 'human-ergonomics-vocoder-processor');
+
+                // Determine FFT settings based on quality slider
+                const q = parseFloat(qualitySlider.value);
+                let fftSize = 2048, hopSize = 512;
+                if (q === 0.5) { fftSize = 1024; hopSize = 512; }
+                else if (q === 1.0) { fftSize = 2048; hopSize = 512; }
+                else if (q === 1.5) { fftSize = 4096; hopSize = 512; }
+                else if (q === 2.0) { fftSize = 4096; hopSize = 256; }
+
+                offlineVocoder.port.postMessage({
+                    type: 'reconfig',
+                    fftSize: fftSize,
+                    hopSize: hopSize
+                });
+
+                // Pass EXACT current parameters (CRITICAL: Respect pitchCorrectToggle)
+                offlineVocoder.port.postMessage({
+                    maxTopN: parseInt(topNSlider.value, 10),
+                    dryWet: parseFloat(dryWetSlider.value),
+                    threshold: parseFloat(threshSlider.value),
+                    masterGain: parseFloat(masterGainSlider.value),
+                    waveform: waveformSelect.value,
+
+                    formantScale: parseFloat(formantScaleSlider.value),
+                    pitchShiftSemitones: parseInt(pitchShiftSlider.value, 10),
+                    spectralTilt: parseFloat(spectralTiltSlider.value),
+                    tremoloAmount: parseFloat(tremoloSlider.value),
+
+                    pitchCorrectEnabled: pitchCorrectToggle.checked, // Respect user toggle!
+                    rootKey: parseInt(rootKeySelect.value, 10),
+                    selectedScale: scaleSelect.value,
+                    retuneSpeed: parseFloat(retuneSpeedSlider.value),
+                    correctAmount: parseFloat(correctAmountSlider.value)
+                });
+
+                offlineSource.connect(offlineVocoder);
+                offlineVocoder.connect(offlineCtx.destination);
+
+                offlineSource.start(0);
+
+                const renderedBuffer = await offlineCtx.startRendering();
+                const wavBlob = encodeWAV(renderedBuffer.getChannelData(0), sampleRate);
+
+                // Auto Trigger Download
+                const url = URL.createObjectURL(wavBlob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `transformed_voice_${Date.now()}.wav`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+
+            } catch (err) {
+                console.error("WAV Export Failed:", err);
+                alert("WAVファイルの生成に失敗しました: " + err.message);
+            } finally {
+                exportWavBtn.disabled = false;
+                exportWavBtn.textContent = "💾 WAV書き出し";
+            }
+        }
+
+        /**
+         * 16-bit PCM WAV File Encoder
+         */
+        function encodeWAV(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+
+            const writeString = (v, offset, str) => {
+                for (let i = 0; i < str.length; i++) {
+                    v.setUint8(offset + i, str.charCodeAt(i));
+                }
+            };
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Subchunk1Size
+            view.setUint16(20, 1, true);  // PCM
+            view.setUint16(22, 1, true);  // Mono
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); // ByteRate
+            view.setUint16(32, 2, true);  // BlockAlign
+            view.setUint16(34, 16, true); // BitsPerSample
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+
+            let offset = 44;
+            for (let i = 0; i < samples.length; i++, offset += 2) {
+                let s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
         }
 
         function updateUIState() {
@@ -1136,6 +1385,7 @@
         window.addEventListener('resize', resizeCanvases);
         resizeCanvases();
 
+        // Real-time Canvas Rendering Animation Loop
         function renderLoop() {
             if (!isRunning) return;
 
@@ -1149,7 +1399,7 @@
                 activeSinesDisp.textContent = `${activeCount} / ${topNSlider.value}`;
                 pitchRatioDisp.textContent = `${ratioR.toFixed(3)}x`;
 
-                // --- ピッチ HUD メーター更新 ---
+                // Pitch HUD Updates
                 if (f0 > 0) {
                     f0Disp.textContent = `${f0.toFixed(1)} Hz`;
 
@@ -1173,7 +1423,7 @@
                     centsNeedle.style.left = "50%";
                 }
 
-                // --- Spectrum Canvas 描画 ---
+                // Spectrum Canvas Rendering
                 const sw = spectrumCanvas.width;
                 const sh = spectrumCanvas.height;
                 specCtx.fillStyle = 'rgba(5, 7, 12, 0.4)';
@@ -1187,7 +1437,6 @@
                 const numBins = mags.length;
                 let maxPeak = 0;
 
-                // 原音 FFT スペクトラム
                 specCtx.beginPath();
                 specCtx.strokeStyle = 'rgba(168, 85, 247, 0.25)';
                 specCtx.lineWidth = 1;
@@ -1205,7 +1454,6 @@
                 }
                 specCtx.stroke();
 
-                // 変換後の加算波スペクトラム
                 for (let i = 0; i < topIndices.length; i++) {
                     const binIdx = topIndices[i];
                     const val = mags[binIdx];
@@ -1235,7 +1483,7 @@
                 meterBar.style.width = `${meterPct}%`;
                 peakLevelDb.textContent = isFinite(db) ? `${db.toFixed(1)} dB` : '-inf dB';
 
-                // --- Spectrogram Canvas 描画 ---
+                // Spectrogram Waterfall Canvas Rendering
                 const gw = spectrogramCanvas.width;
                 const gh = spectrogramCanvas.height;
 
@@ -1273,16 +1521,43 @@
             requestAnimationFrame(renderLoop);
         }
 
+        // Event Listener Bindings
         toggleBtn.addEventListener('click', () => {
             if (isRunning) stopAudio();
             else initAudio();
         });
 
-        // プリセットボタンイベント
+        srcMicBtn.addEventListener('click', () => {
+            inputMode = 'mic';
+            connectSourceMode();
+        });
+
+        srcRecBtn.addEventListener('click', () => {
+            if (!recordedAudioBuffer) {
+                alert("まず「録音開始」ボタンを押してマイク音声の録音を行ってください。");
+                return;
+            }
+            inputMode = 'rec';
+            connectSourceMode();
+        });
+
+        recStartBtn.addEventListener('click', startRecording);
+        recStopBtn.addEventListener('click', stopRecording);
+
+        loopPlayBtn.addEventListener('click', () => {
+            if (isLoopPlaying) {
+                stopLoopPlayback();
+            } else {
+                inputMode = 'rec';
+                connectSourceMode();
+            }
+        });
+
+        exportWavBtn.addEventListener('click', exportProcessedWav);
+
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const targetBtn = e.currentTarget;
-                applyPreset(targetBtn.dataset.preset);
+                applyPreset(e.currentTarget.dataset.preset);
             });
         });
 
@@ -1342,7 +1617,7 @@
 
         threshSlider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
-            threshVal.textContent = val.toFixed(5);
+            threshVal.textContent = val.toFixed(6);
             updateProcessorParams();
         });
 
