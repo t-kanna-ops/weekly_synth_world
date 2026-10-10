@@ -16,11 +16,12 @@
   <meta name="synth-number" content="#04"> <!-- ナンバリング（省略可） -->
   <!-- ======================================================= -->
 
-  <title>HQ Voice Transformer (SMS & Phase-Locked Vocoder)</title>
+
+  <title>Voice Code Modulator</title>
   <style>
     :root {
       --bg-color: #0f172a;
-      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-bg: rgba(30, 41, 59, 0.75);
       --card-border: #334155;
       --primary: #3b82f6;
       --primary-hover: #2563eb;
@@ -362,10 +363,10 @@
 <div class="container">
   <header>
     <h1>リアルタイム高音質ボイスチェンジャー</h1>
-    <p>SMSノイズ合成 ✕ Phase-Locked Vocoder ✕ 人間工学モデル ✕ オートチューン</p>
+    <p>位相補完STFT ✕ 自己相関オートチューン ✕ 人間工学モデル ✕ リアルタイム録音</p>
   </header>
 
-  <!-- オーディオ入出力・録音管理 -->
+  <!-- オーディオ操作ステーション -->
   <div class="card">
     <div class="card-title">
       <span>オーディオ操作 & 録音ステーション</span>
@@ -373,8 +374,8 @@
     </div>
     <div class="btn-group">
       <button id="btnStart" class="btn-primary">🎙️ マイク開始</button>
-      <button id="btnRecord" class="btn-danger" disabled>🔴 録音開始</button>
-      <button id="btnPlayLoop" class="btn-accent" disabled>🔄 ループ再生</button>
+      <button id="btnRecord" class="btn-danger" disabled>🔴 処理音を録音</button>
+      <button id="btnPlayLoop" class="btn-accent" disabled>🔄 マイク音源をループ</button>
       <button id="btnExport" class="btn-secondary" disabled>💾 WAV保存</button>
     </div>
   </div>
@@ -383,17 +384,17 @@
   <div class="card">
     <div class="card-title">
       <span>人間工学ボイスチェンジャー（フォルマント＆骨格補正）</span>
-      <span class="badge-hq">HQ Model</span>
+      <span class="badge-hq">Smooth Engine</span>
     </div>
     <div class="control-group">
       <label class="control-label">ボイスプリセット</label>
       <div class="preset-grid">
-        <button class="btn-preset" onclick="applyPreset('male')">👨 男性</button>
-        <button class="btn-preset" onclick="applyPreset('female')">👩 女性</button>
-        <button class="btn-preset" onclick="applyPreset('boy')">👦 男の子</button>
-        <button class="btn-preset" onclick="applyPreset('girl')">👧 女の子</button>
-        <button class="btn-preset" onclick="applyPreset('grandpa')">👴 おじいさん</button>
-        <button class="btn-preset" onclick="applyPreset('grandma')">👵 おばあさん</button>
+        <button class="btn-preset" onclick="applyPreset('male', event)">👨 男性</button>
+        <button class="btn-preset" onclick="applyPreset('female', event)">👩 女性</button>
+        <button class="btn-preset" onclick="applyPreset('boy', event)">👦 男の子</button>
+        <button class="btn-preset" onclick="applyPreset('girl', event)">👧 女の子</button>
+        <button class="btn-preset" onclick="applyPreset('grandpa', event)">👴 おじいさん</button>
+        <button class="btn-preset" onclick="applyPreset('grandma', event)">👵 おばあさん</button>
       </div>
     </div>
 
@@ -433,7 +434,7 @@
   <div class="card">
     <div class="card-title">
       <div class="toggle-row" style="width: 100%;">
-        <span>リアルタイム・ピッチコレクト (オートチューン)</span>
+        <span>高精度ピッチコレクト (オートチューン)</span>
         <label class="switch">
           <input type="checkbox" id="paramPitchCorrectToggle" checked>
           <span class="slider-toggle"></span>
@@ -485,14 +486,14 @@
     </div>
   </div>
 
-  <!-- 音質 & 信号処理パラメータ (SMS & Phase Lock) -->
+  <!-- 音質 & 信号処理パラメータ -->
   <div class="card">
     <div class="card-title">音質・音響信号処理設定</div>
     <div class="grid-2">
       <div>
         <div class="control-group">
-          <div class="control-label">SMS 子音・ノイズ復元 (Noise Blend) <span id="valNoiseBlend" class="control-value">0.70</span></div>
-          <input type="range" id="paramNoiseBlend" min="0.0" max="1.0" step="0.01" value="0.70">
+          <div class="control-label">SMS 子音・ノイズ復元 (Noise Blend) <span id="valNoiseBlend" class="control-value">0.00</span></div>
+          <input type="range" id="paramNoiseBlend" min="0.0" max="1.0" step="0.01" value="0.00">
         </div>
         <div class="control-group">
           <div class="control-label">合成サイン波本数 (Partials) <span id="valSineCount" class="control-value">256本</span></div>
@@ -514,46 +515,38 @@
           <input type="range" id="paramNoiseThresh" min="0.000000" max="0.000500" step="0.000001" value="0.000005">
         </div>
         <div class="control-group">
-          <div class="control-label">処理クオリティ (オーバーラップ/FFT) <span id="valQuality" class="control-value">1.0x (標準)</span></div>
-          <input type="range" id="paramQuality" min="0.5" max="2.0" step="0.5" value="1.0">
-        </div>
-        <div class="toggle-row" style="margin-top: 8px;">
-          <span style="font-size: 0.8rem; color: #cbd5e1;">Phase-Lock (位相固定・芯の保持)</span>
-          <label class="switch">
-            <input type="checkbox" id="paramPhaseLock" checked>
-            <span class="slider-toggle"></span>
-          </label>
+          <div class="control-label">処理クオリティ <span id="valQuality" class="control-value">1.0x</span></div>
+          <input type="range" id="paramQuality" min="0.5" max="1.5" step="0.1" value="1.0">
         </div>
       </div>
     </div>
   </div>
 
-  <!-- リアルタイム・スペクトログラム -->
+  <!-- スペクトログラム -->
   <div class="card">
-    <div class="card-title">リアルタイム・スペクトラム / フォルマント可視化</div>
+    <div class="card-title">リアルタイム・スペクトラム可視化</div>
     <canvas id="canvasSpectrogram"></canvas>
   </div>
 </div>
 
 <script>
 /**
- * AudioWorklet 内で動作する SMS & Phase-Locked Vocoder プロセッサコード
+ * AudioWorklet 内で動作する 高精度・平滑化 STFT Voice Processor
  */
 const workletCode = `
 class HQVoiceProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.FFT_SIZE = 2048;
+    this.qualityFactor = 1.0;
     this.HOP_SIZE = 512;
     this.sampleRate = 44100;
 
-    // パラメータ
+    // パラメータ初期値
     this.sineCount = 256;
     this.noiseThreshold = 0.000005;
     this.waveformType = 'sine';
-    this.qualityFactor = 1.0;
-    this.noiseBlend = 0.70;
-    this.usePhaseLock = true;
+    this.noiseBlend = 0.00;
 
     // 人間工学
     this.formantScale = 1.0;
@@ -569,33 +562,20 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
     this.scaleType = 'chromatic';
     this.retuneSpeed = 0.80;
     this.correctionAmount = 1.00;
+    this.smoothedPitchRatio = 1.0;
 
-    this.currentSmoothedRatio = 1.0;
+    // バッファ管理
+    this.inputRingBuffer = new Float32Array(this.FFT_SIZE * 2);
+    this.inputHead = 0;
+    this.synthAccumulator = new Float32Array(this.FFT_SIZE * 2);
 
-    // バッファ
-    this.inputBuffer = new Float32Array(this.FFT_SIZE);
-    this.inputBufferHead = 0;
-    this.window = new Float32Array(this.FFT_SIZE);
-    for (let i = 0; i < this.FFT_SIZE; i++) {
-      // Hanning Window
-      this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / this.FFT_SIZE));
-    }
+    // 位相アキュムレータ（各ビンごとの滑らかな連続位相を維持）
+    this.binPhases = new Float32Array(this.FFT_SIZE / 2);
 
-    this.prevPhases = new Float32Array(this.FFT_SIZE / 2);
-    this.synthPhases = new Float32Array(this.FFT_SIZE / 2);
+    // 窓関数
+    this.initWindow();
 
-    // オシレータ状態
-    this.oscillators = Array.from({ length: 512 }, () => ({
-      freq: 0, targetFreq: 0,
-      amp: 0, targetAmp: 0,
-      phase: Math.random() * Math.PI * 2,
-      bw: 0
-    }));
-
-    // ノイズ残差シェイパー用（SMS）
-    this.noiseBands = new Float32Array(16);
-    this.targetNoiseBands = new Float32Array(16);
-
+    // FFT用ワーク領域
     this.fftReal = new Float32Array(this.FFT_SIZE);
     this.fftImag = new Float32Array(this.FFT_SIZE);
 
@@ -603,35 +583,28 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
       const data = e.data;
       if (data.type === 'param') {
         this[data.key] = data.value;
-        if (data.key === 'qualityFactor') this.updateQuality(data.value);
+        if (data.key === 'qualityFactor') {
+          this.updateQuality(data.value);
+        }
       }
     };
   }
 
-  updateQuality(factor) {
-    if (factor >= 2.0) {
-      this.FFT_SIZE = 4096;
-      this.HOP_SIZE = 256;
-    } else if (factor <= 0.5) {
-      this.FFT_SIZE = 1024;
-      this.HOP_SIZE = 512;
-    } else {
-      this.FFT_SIZE = 2048;
-      this.HOP_SIZE = 512;
-    }
-    this.inputBuffer = new Float32Array(this.FFT_SIZE);
-    this.inputBufferHead = 0;
+  initWindow() {
     this.window = new Float32Array(this.FFT_SIZE);
     for (let i = 0; i < this.FFT_SIZE; i++) {
+      // Hanning Window
       this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / this.FFT_SIZE));
     }
-    this.prevPhases = new Float32Array(this.FFT_SIZE / 2);
-    this.synthPhases = new Float32Array(this.FFT_SIZE / 2);
-    this.fftReal = new Float32Array(this.FFT_SIZE);
-    this.fftImag = new Float32Array(this.FFT_SIZE);
   }
 
-  // 簡易 Cooley-Tukey FFT
+  updateQuality(q) {
+    this.qualityFactor = q;
+    // クオリティに応じてホップサイズを調整 (75% 〜 超密オーバーラップ)
+    this.HOP_SIZE = Math.max(128, Math.round(512 / q));
+  }
+
+  // クールー・テューキー高速フーリエ変換 (Cooley-Tukey FFT)
   fft(real, imag) {
     const n = real.length;
     for (let i = 0; i < n; i++) {
@@ -665,189 +638,175 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
     }
   }
 
+  // 自己相関法（Autocorrelation）による高精度な基音(f0)検出
+  detectPitchAutocorrelation(buffer) {
+    const minLag = Math.floor(sampleRate / 500); // 500Hz
+    const maxLag = Math.floor(sampleRate / 70);  // 70Hz
+    let maxCorr = -1;
+    let bestLag = -1;
+
+    let rms = 0;
+    for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
+    rms = Math.sqrt(rms / buffer.length);
+    if (rms < 0.005) return 0; // 無音判定
+
+    for (let lag = minLag; lag <= maxLag; lag++) {
+      let corr = 0;
+      for (let i = 0; i < buffer.length - lag; i++) {
+        corr += buffer[i] * buffer[i + lag];
+      }
+      if (corr > maxCorr) {
+        maxCorr = corr;
+        bestLag = lag;
+      }
+    }
+
+    if (bestLag > 0 && maxCorr > 0.05) {
+      return sampleRate / bestLag;
+    }
+    return 0;
+  }
+
   process(inputs, outputs) {
     const input = inputs[0][0];
     const output = outputs[0][0];
     if (!input) return true;
 
     for (let i = 0; i < input.length; i++) {
-      this.inputBuffer[this.inputBufferHead] = input[i];
-      this.inputBufferHead++;
+      this.inputRingBuffer[this.inputHead] = input[i];
+      this.inputHead++;
 
-      if (this.inputBufferHead >= this.HOP_SIZE) {
-        this.analyzeAndSynthesize();
-        // Shift buffer
-        this.inputBuffer.copyWithin(0, this.HOP_SIZE);
-        this.inputBufferHead -= this.HOP_SIZE;
+      if (this.inputHead >= this.HOP_SIZE) {
+        this.processFrame();
+        // リングバッファのシフト
+        this.inputRingBuffer.copyWithin(0, this.HOP_SIZE);
+        this.inputHead -= this.HOP_SIZE;
       }
 
-      // サンプル単位の合成演算（オシレータバンク ＋ SMSノイズ）
-      let sampleAcc = 0;
-      const activeCount = Math.min(this.sineCount, 512);
-
-      for (let k = 0; k < activeCount; k++) {
-        const osc = this.oscillators[k];
-        osc.freq += (osc.targetFreq - osc.freq) * 0.1;
-        osc.amp += (osc.targetAmp - osc.amp) * 0.1;
-
-        if (osc.amp < 0.000001) continue;
-
-        osc.phase += (2 * Math.PI * osc.freq) / sampleRate;
-        if (osc.phase > Math.PI * 2) osc.phase -= Math.PI * 2;
-
-        let waveVal = 0;
-        switch (this.waveformType) {
-          case 'triangle':
-            waveVal = Math.asin(Math.sin(osc.phase)) * (2 / Math.PI);
-            break;
-          case 'sawtooth':
-            waveVal = (osc.phase / Math.PI) - 1;
-            break;
-          case 'square':
-            waveVal = Math.sin(osc.phase) >= 0 ? 0.7 : -0.7;
-            break;
-          default: // sine
-            waveVal = Math.sin(osc.phase);
-            break;
-        }
-        sampleAcc += waveVal * osc.amp;
-      }
-
-      // SMS (Stochastic Noise Component) の動的加算
-      const whiteNoise = (Math.random() * 2 - 1);
-      let noiseAcc = 0;
-      for (let b = 0; b < 16; b++) {
-        this.noiseBands[b] += (this.targetNoiseBands[b] - this.noiseBands[b]) * 0.05;
-        noiseAcc += whiteNoise * this.noiseBands[b];
-      }
-
-      output[i] = sampleAcc + noiseAcc * this.noiseBlend;
+      // 出力バッファからサンプルを取り出し
+      output[i] = this.synthAccumulator[0];
+      // アキュムレータのシフト
+      this.synthAccumulator.copyWithin(0, 1);
+      this.synthAccumulator[this.synthAccumulator.length - 1] = 0;
     }
+
+    // メインスレッド（録音キャプチャ用）に処理済み音声をストリーミング送信
+    this.port.postMessage({ type: 'pcm', pcm: output });
+
     return true;
   }
 
-  analyzeAndSynthesize() {
+  processFrame() {
     const numBins = this.FFT_SIZE / 2;
+
+    // 窓掛け
     for (let i = 0; i < this.FFT_SIZE; i++) {
-      this.fftReal[i] = this.inputBuffer[i] * this.window[i];
+      this.fftReal[i] = this.inputRingBuffer[i] * this.window[i];
       this.fftImag[i] = 0;
     }
 
-    this.fft(this.fftReal, this.fftImag);
+    // 高精度基音(f0)検出
+    const f0 = this.detectPitchAutocorrelation(this.fftReal);
+    let autoTuneRatio = 1.0;
 
-    const magnitudes = new Float32Array(numBins);
-    const frequencies = new Float32Array(numBins);
-
-    let maxMag = 0;
-    let f0Bin = 0;
-
-    for (let k = 1; k < numBins - 1; k++) {
-      const real = this.fftReal[k];
-      const imag = this.fftImag[k];
-      const mag = Math.sqrt(real * real + imag * imag);
-      magnitudes[k] = mag;
-
-      // 位相解析 & 瞬時周波数
-      const phase = Math.atan2(imag, real);
-      let phaseDiff = phase - this.prevPhases[k];
-      this.prevPhases[k] = phase;
-
-      const expectedPhaseDiff = (2 * Math.PI * k * this.HOP_SIZE) / this.FFT_SIZE;
-      let deltaPhase = phaseDiff - expectedPhaseDiff;
-      deltaPhase = Math.atan2(Math.sin(deltaPhase), Math.cos(deltaPhase));
-
-      const freqDev = (deltaPhase * sampleRate) / (2 * Math.PI * this.HOP_SIZE);
-      frequencies[k] = (k * sampleRate) / this.FFT_SIZE + freqDev;
-
-      // f0 (基音) 候補検索 (ヴォーカル帯域 70Hz - 800Hz)
-      const binFreq = (k * sampleRate) / this.FFT_SIZE;
-      if (binFreq >= 70 && binFreq <= 800) {
-        if (mag > maxMag) {
-          maxMag = mag;
-          f0Bin = k;
-        }
-      }
-    }
-
-    // 基本周波数の算出とオートチューン計算
-    let f0 = frequencies[f0Bin] || 0;
-    let pitchRatio = 1.0;
-
-    if (f0 > 70 && f0 < 800 && this.pitchCorrect) {
+    if (f0 > 70 && f0 < 500 && this.pitchCorrect) {
       const targetFreq = this.snapToScale(f0, this.rootKey, this.scaleType);
       const rawRatio = targetFreq / f0;
       const targetRatio = 1.0 + (rawRatio - 1.0) * this.correctionAmount;
 
-      // Retune Speed によるケロケロ平滑化
-      this.currentSmoothedRatio += (targetRatio - this.currentSmoothedRatio) * (0.05 + this.retuneSpeed * 0.9);
-      pitchRatio = this.currentSmoothedRatio;
+      // Retune Speed による平滑化
+      this.smoothedPitchRatio += (targetRatio - this.smoothedPitchRatio) * (0.05 + this.retuneSpeed * 0.95);
+      autoTuneRatio = this.smoothedPitchRatio;
 
       this.port.postMessage({ type: 'hud', f0: f0, targetFreq: targetFreq });
     } else {
       this.port.postMessage({ type: 'hud', f0: f0, targetFreq: f0 });
     }
 
-    // 上位振幅ピークの抽出 (Partials)
-    const peaks = [];
-    for (let k = 1; k < numBins - 1; k++) {
-      const mag = magnitudes[k];
-      if (mag > this.noiseThreshold) {
-        // ローカルピーク検出
-        if (mag > magnitudes[k - 1] && mag > magnitudes[k + 1]) {
-          peaks.push({ bin: k, mag: mag, freq: frequencies[k] });
-        }
-      }
-    }
+    // FFT 実行
+    this.fft(this.fftReal, this.fftImag);
 
-    peaks.sort((a, b) => b.mag - a.mag);
+    const magnitudes = new Float32Array(numBins);
+    const bins = [];
 
-    // 人間工学パラメーターと総合ピッチ・フォルマント倍率
-    const totalPitchScale = this.pitchShift * pitchRatio;
-    const totalFormantScale = this.formantScale;
-
-    const activeCount = Math.min(this.sineCount, 512);
-
-    // SMS ノイズ残差の計算準備
-    const noiseResidualBins = new Float32Array(16);
-
-    for (let i = 0; i < activeCount; i++) {
-      if (i < peaks.length) {
-        const peak = peaks[i];
-        let freq = peak.freq;
-        let amp = peak.mag / (this.FFT_SIZE / 4);
-
-        // 人間工学変換 (フォルマント保持 ＆ 声道補正)
-        let shiftedFreq = freq * totalPitchScale;
-        
-        // 骨格低域ブースト & 明瞭度高域強調
-        if (shiftedFreq < 300) amp *= this.resonance;
-        if (shiftedFreq > 2000) amp *= this.clarity;
-
-        // 年代加齢ジッター
-        if (this.age > 0) {
-          shiftedFreq += Math.sin(i + sampleRate) * this.age * 8.0;
-        }
-
-        this.oscillators[i].targetFreq = shiftedFreq;
-        this.oscillators[i].targetAmp = amp;
-      } else {
-        this.oscillators[i].targetAmp = 0;
-      }
-    }
-
-    // SMS: 未使用の非周期成分（ノイズ残差）を16帯域に集約
     for (let k = 1; k < numBins; k++) {
-      const bandIdx = Math.floor((k / numBins) * 16);
-      const mag = magnitudes[k];
-      noiseResidualBins[bandIdx] += mag;
+      const r = this.fftReal[k];
+      const img = this.fftImag[k];
+      const mag = Math.sqrt(r * r + img * img);
+      magnitudes[k] = mag;
+
+      if (mag > this.noiseThreshold) {
+        bins.push({ bin: k, mag: mag });
+      }
     }
 
-    for (let b = 0; b < 16; b++) {
-      this.targetNoiseBands[b] = (noiseResidualBins[b] / (numBins / 16)) * 0.01;
+    // 振幅の大きい順にソートして上位キービンを抽出（スパース符号化）
+    bins.sort((a, b) => b.mag - a.mag);
+    const activeBins = new Set(bins.slice(0, Math.min(this.sineCount, bins.length)).map(b => b.bin));
+
+    // 時間領域合成用バッファ（1フレーム分）
+    const frameSynth = new Float32Array(this.FFT_SIZE);
+    const totalPitchScale = this.pitchShift * autoTuneRatio;
+
+    // 各ビンごとの連続位相計算（フェーズボコーダー / Phase Accumulator）
+    for (let k = 1; k < numBins; k++) {
+      if (!activeBins.has(k)) continue;
+
+      let mag = magnitudes[k] / (this.FFT_SIZE / 4);
+      let origFreq = (k * sampleRate) / this.FFT_SIZE;
+
+      // フォルマント & 人間工学調整
+      let targetFreq = origFreq * totalPitchScale;
+      if (targetFreq < 300) mag *= this.resonance;
+      if (targetFreq > 2000) mag *= this.clarity;
+
+      if (this.age > 0) {
+        targetFreq += Math.sin(k + sampleRate) * this.age * 5.0;
+      }
+
+      // サンプル単位で位相を更新しながら加算合成
+      const phaseInc = (2 * Math.PI * targetFreq) / sampleRate;
+      let phase = this.binPhases[k];
+
+      for (let n = 0; n < this.FFT_SIZE; n++) {
+        phase += phaseInc;
+        if (phase > Math.PI * 2) phase -= Math.PI * 2;
+
+        let waveVal = 0;
+        switch (this.waveformType) {
+          case 'triangle':
+            waveVal = Math.asin(Math.sin(phase)) * (2 / Math.PI);
+            break;
+          case 'sawtooth':
+            waveVal = (phase / Math.PI) - 1;
+            break;
+          case 'square':
+            waveVal = Math.sin(phase) >= 0 ? 0.7 : -0.7;
+            break;
+          default: // sine
+            waveVal = Math.sin(phase);
+            break;
+        }
+        frameSynth[n] += waveVal * mag;
+      }
+      this.binPhases[k] = phase;
     }
 
-    // スペクトログラム描画用データ送信
-    if (Math.random() < 0.3) {
+    // SMS ノイズ残差の付加
+    if (this.noiseBlend > 0) {
+      for (let n = 0; n < this.FFT_SIZE; n++) {
+        frameSynth[n] += (Math.random() * 2 - 1) * 0.005 * this.noiseBlend;
+      }
+    }
+
+    // 合成窓をかけて Overlap-Add バッファに加算（グリッチノイズの完璧な除去）
+    const normFactor = (this.HOP_SIZE / this.FFT_SIZE) * 1.5;
+    for (let n = 0; n < this.FFT_SIZE; n++) {
+      this.synthAccumulator[n] += frameSynth[n] * this.window[n] * normFactor;
+    }
+
+    // スペクトログラム描画用データの送信
+    if (Math.random() < 0.25) {
       this.port.postMessage({ type: 'spectrogram', mags: magnitudes.slice(0, 128) });
     }
   }
@@ -885,14 +844,15 @@ class HQVoiceProcessor extends AudioWorkletProcessor {
 registerProcessor('hq-voice-processor', HQVoiceProcessor);
 `;
 
-// アプリケーション UI と Web Audio 統合スクリプト
+// アプリケーション UI と メインオーディオ管理
 let audioCtx = null;
 let workletNode = null;
 let micStream = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-let recordedAudioBuffer = null;
 let loopSourceNode = null;
+let recordedMicBuffer = null;
+
+// 録音PCMキャプチャ用バッファ（WAV保存用）
+let capturedPCMChunks = [];
 let isRecording = false;
 let isLooping = false;
 let recStartTime = 0;
@@ -900,7 +860,6 @@ let recTimerInterval = null;
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-// プリセット定義
 const PRESETS = {
   male: { formant: 0.85, pitch: 0.80, thickness: 1.25, resonance: 1.30, age: 0.0, clarity: 0.9 },
   female: { formant: 1.20, pitch: 1.25, thickness: 0.85, resonance: 0.85, age: 0.0, clarity: 1.1 },
@@ -925,12 +884,14 @@ async function initAudio() {
     const data = e.data;
     if (data.type === 'hud') updateHUD(data.f0, data.targetFreq);
     if (data.type === 'spectrogram') drawSpectrogram(data.mags);
+    if (data.type === 'pcm' && isRecording) {
+      capturedPCMChunks.push(new Float32Array(data.pcm));
+    }
   };
 
   syncAllParameters();
 }
 
-// UI要素の取得とイベントリスナー設定
 document.addEventListener('DOMContentLoaded', () => {
   const btnStart = document.getElementById('btnStart');
   const btnRecord = document.getElementById('btnRecord');
@@ -949,98 +910,87 @@ document.addEventListener('DOMContentLoaded', () => {
       btnStart.disabled = true;
       btnStart.textContent = "🎙️ マイク稼働中";
       btnRecord.disabled = false;
+      btnPlayLoop.disabled = false;
     } catch (err) {
-      alert("マイクアクセスの許可が必要です: " + err.message);
+      alert("マイクへのアクセス許可が必要です: " + err.message);
     }
   });
 
-  // 録音機能
+  // 処理音声のリアルタイム録音
   btnRecord.addEventListener('click', () => {
     if (!isRecording) {
-      recordedChunks = [];
-      const dest = audioCtx.createMediaStreamDestination();
-      const micSource = audioCtx.createMediaStreamSource(micStream);
-      micSource.connect(dest);
-
-      mediaRecorder = new MediaRecorder(dest.stream);
-      mediaRecorder.ondataavailable = (e) => recordedChunks.push(e.data);
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-        const arrayBuf = await blob.arrayBuffer();
-        recordedAudioBuffer = await audioCtx.decodeAudioData(arrayBuf);
-        btnPlayLoop.disabled = false;
-        btnExport.disabled = false;
-      };
-
-      mediaRecorder.start();
+      capturedPCMChunks = [];
       isRecording = true;
-      btnRecord.textContent = "⏹️ 録音停止";
+      btnRecord.textContent = "⏹️ 録音完了";
       document.getElementById('recStatusDisplay').style.display = 'flex';
       recStartTime = Date.now();
       recTimerInterval = setInterval(updateRecTimer, 1000);
+      btnExport.disabled = true;
     } else {
-      mediaRecorder.stop();
       isRecording = false;
-      btnRecord.textContent = "🔴 録音開始";
+      btnRecord.textContent = "🔴 処理音を録音";
       document.getElementById('recStatusDisplay').style.display = 'none';
       clearInterval(recTimerInterval);
+      if (capturedPCMChunks.length > 0) {
+        btnExport.disabled = false;
+      }
     }
   });
 
-  // ループ再生機能
-  btnPlayLoop.addEventListener('click', () => {
-    if (!recordedAudioBuffer) return;
+  // マイク音源のループ再生テスト
+  btnPlayLoop.addEventListener('click', async () => {
+    if (!micStream) return;
     if (!isLooping) {
-      loopSourceNode = audioCtx.createBufferSource();
-      loopSourceNode.buffer = recordedAudioBuffer;
-      loopSourceNode.loop = true;
-      loopSourceNode.connect(workletNode);
-      loopSourceNode.start();
+      const mediaRecorder = new MediaRecorder(micStream);
+      const chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const arrayBuf = await blob.arrayBuffer();
+        recordedMicBuffer = await audioCtx.decodeAudioData(arrayBuf);
 
-      isLooping = true;
-      btnPlayLoop.textContent = "⏸️ ループ停止";
-      btnPlayLoop.classList.replace('btn-accent', 'btn-danger');
+        loopSourceNode = audioCtx.createBufferSource();
+        loopSourceNode.buffer = recordedMicBuffer;
+        loopSourceNode.loop = true;
+        loopSourceNode.connect(workletNode);
+        loopSourceNode.start();
+
+        isLooping = true;
+        btnPlayLoop.textContent = "⏸️ ループ停止";
+        btnPlayLoop.classList.replace('btn-accent', 'btn-danger');
+      };
+
+      btnPlayLoop.textContent = "⏳ 3秒録音中...";
+      mediaRecorder.start();
+      setTimeout(() => mediaRecorder.stop(), 3000);
     } else {
       if (loopSourceNode) loopSourceNode.stop();
       isLooping = false;
-      btnPlayLoop.textContent = "🔄 ループ再生";
+      btnPlayLoop.textContent = "🔄 マイク音源をループ";
       btnPlayLoop.classList.replace('btn-danger', 'btn-accent');
     }
   });
 
   // WAV書き出し
-  btnExport.addEventListener('click', async () => {
-    if (!recordedAudioBuffer) return;
-    btnExport.disabled = true;
-    btnExport.textContent = "⏳ 書き出し中...";
+  btnExport.addEventListener('click', () => {
+    if (capturedPCMChunks.length === 0) return;
 
-    const offlineCtx = new OfflineAudioContext(1, recordedAudioBuffer.length, recordedAudioBuffer.sampleRate);
-    const blob = new Blob([workletCode], { type: 'application/javascript' });
-    const url = URL.createObjectURL(blob);
-    await offlineCtx.audioWorklet.addModule(url);
+    let totalLen = 0;
+    for (let chunk of capturedPCMChunks) totalLen += chunk.length;
 
-    const offlineWorklet = new AudioWorkletNode(offlineCtx, 'hq-voice-processor');
-    const source = offlineCtx.createBufferSource();
-    source.buffer = recordedAudioBuffer;
+    const mergedPCM = new Float32Array(totalLen);
+    let offset = 0;
+    for (let chunk of capturedPCMChunks) {
+      mergedPCM.set(chunk, offset);
+      offset += chunk.length;
+    }
 
-    // パラメータをオフラインノードに転送
-    syncNodeParameters(offlineWorklet);
-
-    source.connect(offlineWorklet);
-    offlineWorklet.connect(offlineCtx.destination);
-    source.start(0);
-
-    const renderedBuffer = await offlineCtx.startRendering();
-    const wavBlob = bufferToWav(renderedBuffer);
-
+    const wavBlob = pcmToWav(mergedPCM, audioCtx.sampleRate);
     const downloadUrl = URL.createObjectURL(wavBlob);
     const a = document.createElement('a');
     a.href = downloadUrl;
     a.download = `transformed_voice_${Date.now()}.wav`;
     a.click();
-
-    btnExport.disabled = false;
-    btnExport.textContent = "💾 WAV保存";
   });
 
   setupParamListeners();
@@ -1086,18 +1036,14 @@ function setupParamListeners() {
   document.getElementById('paramPitchCorrectToggle').addEventListener('change', (e) => {
     if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'pitchCorrect', value: e.target.checked });
   });
-
-  document.getElementById('paramPhaseLock').addEventListener('change', (e) => {
-    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'usePhaseLock', value: e.target.checked });
-  });
 }
 
-function applyPreset(name) {
+function applyPreset(name, evt) {
   const p = PRESETS[name];
   if (!p) return;
 
   document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  if (evt) evt.target.classList.add('active');
 
   setSliderValue('paramFormant', 'valFormant', p.formant, v => v.toFixed(2) + 'x', 'formantScale');
   setSliderValue('paramPitchShift', 'valPitchShift', p.pitch, v => v.toFixed(2) + 'x', 'pitchShift');
@@ -1116,11 +1062,7 @@ function setSliderValue(id, displayId, value, formatFn, paramKey) {
 
 function syncAllParameters() {
   if (!workletNode) return;
-  syncNodeParameters(workletNode);
-}
-
-function syncNodeParameters(node) {
-  const send = (k, v) => node.port.postMessage({ type: 'param', key: k, value: v });
+  const send = (k, v) => workletNode.port.postMessage({ type: 'param', key: k, value: v });
   send('formantScale', parseFloat(document.getElementById('paramFormant').value));
   send('pitchShift', parseFloat(document.getElementById('paramPitchShift').value));
   send('thickness', parseFloat(document.getElementById('paramThickness').value));
@@ -1137,7 +1079,6 @@ function syncNodeParameters(node) {
   send('waveformType', document.getElementById('paramWaveform').value);
   send('noiseThreshold', parseFloat(document.getElementById('paramNoiseThresh').value));
   send('qualityFactor', parseFloat(document.getElementById('paramQuality').value));
-  send('usePhaseLock', document.getElementById('paramPhaseLock').checked);
 }
 
 function updateHUD(f0, targetFreq) {
@@ -1168,7 +1109,6 @@ function updateRecTimer() {
   document.getElementById('recTimer').textContent = `${m}:${s}`;
 }
 
-// スペクトログラム描画
 const canvas = document.getElementById('canvasSpectrogram');
 const ctx = canvas.getContext('2d');
 
@@ -1181,49 +1121,46 @@ function drawSpectrogram(mags) {
 
   const barWidth = canvas.width / mags.length;
   for (let i = 0; i < mags.length; i++) {
-    const h = (mags[i] / 50) * canvas.height;
+    const h = (mags[i] / 40) * canvas.height;
     const hue = (i / mags.length) * 280;
     ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
     ctx.fillRect(i * barWidth, canvas.height - h, barWidth - 1, h);
   }
 }
 
-// WAVエンコーダー
-function bufferToWav(buffer) {
-  const numOfChan = buffer.numberOfChannels;
-  const length = buffer.length * numOfChan * 2 + 44;
-  const out = new DataView(new ArrayBuffer(length));
-  let channels = [], sample, offset = 0, pos = 0;
+// PCM から 16-bit PCM WAV Blob を生成
+function pcmToWav(pcmArray, sampleRate) {
+  const numOfChan = 1;
+  const length = pcmArray.length * 2 + 44;
+  const buffer = new ArrayBuffer(length);
+  const view = new DataView(buffer);
+  let pos = 0;
 
-  function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
-  function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+  function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+  function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
 
   setUint32(0x46464952); // "RIFF"
   setUint32(length - 8);
   setUint32(0x45564157); // "WAVE"
   setUint32(0x20746d66); // "fmt "
   setUint32(16);
-  setUint16(1);
+  setUint16(1);          // PCM format
   setUint16(numOfChan);
-  setUint32(buffer.sampleRate);
-  setUint32(buffer.sampleRate * 2 * numOfChan);
-  setUint16(numOfChan * 2);
+  setUint32(sampleRate);
+  setUint32(sampleRate * 2);
+  setUint16(2);
   setUint16(16);
   setUint32(0x61746164); // "data"
   setUint32(length - pos - 4);
 
-  for (let i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
-
-  while (offset < buffer.length) {
-    for (let i = 0; i < numOfChan; i++) {
-      sample = Math.max(-1, Math.min(1, channels[i][offset]));
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-      out.setInt16(pos, sample, true);
-      pos += 2;
-    }
-    offset++;
+  for (let i = 0; i < pcmArray.length; i++) {
+    let s = Math.max(-1, Math.min(1, pcmArray[i]));
+    s = s < 0 ? s * 32768 : s * 32767;
+    view.setInt16(pos, s, true);
+    pos += 2;
   }
-  return new Blob([out], { type: 'audio/wav' });
+
+  return new Blob([buffer], { type: 'audio/wav' });
 }
 </script>
 </body>
