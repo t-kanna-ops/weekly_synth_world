@@ -272,6 +272,34 @@
             { note: 'B6',  freq: 1975.53 }
         ];
 
+        // 金魚サイズ（0.5:最小 ～ 1.5:最大）に応じた最低・最高周波数の範囲算出（比例関係）
+        function getFreqRangeForSize(sizeMult) {
+            const t = Math.min(Math.max((sizeMult - 0.5) / (1.5 - 0.5), 0), 1);
+            const minFreq = 1500 - t * (1500 - 150);
+            const maxFreq = 15000 - t * (15000 - 800);
+            return { minFreq, maxFreq };
+        }
+
+        // 指定周波数範囲（minFreq～maxFreq）に収まるスケール音（基音）を取得
+        function getScaleNoteForRange(minFreq, maxFreq) {
+            const validFreqs = [];
+            SCALE_NOTES.forEach(item => {
+                let f = item.freq;
+                while (f < minFreq) {
+                    f *= 2;
+                }
+                while (f >= minFreq && f <= maxFreq) {
+                    validFreqs.push(f);
+                    f *= 2;
+                }
+            });
+
+            if (validFreqs.length > 0) {
+                return validFreqs[Math.floor(Math.random() * validFreqs.length)];
+            }
+            return Math.min(Math.max(minFreq, 440), maxFreq);
+        }
+
         // --- 1/f Pink Noise Fluctuation Generator ---
         class PinkNoiseGenerator {
             constructor() {
@@ -459,6 +487,7 @@
                 this.destination = destination;
                 this.active = false;
                 this.noteFreq = 0;
+                this.maxFreq = 20000;
                 this.startTime = 0;
                 this.osc = null;
                 this.subOsc = null;
@@ -474,7 +503,7 @@
                 this.gain.connect(destination);
             }
 
-            play(freq) {
+            play(freq, maxFreq = 20000) {
                 const now = this.ctx.currentTime;
                 
                 if (this.osc) {
@@ -486,6 +515,7 @@
 
                 this.active = true;
                 this.noteFreq = freq;
+                this.maxFreq = maxFreq;
                 this.startTime = now;
 
                 this.osc = this.ctx.createOscillator();
@@ -519,7 +549,9 @@
                 const pinkVal = pinkNoiseLFO.next();
                 const BASE_CUTOFF = 130;
                 
-                const modCutoff = Math.min(Math.max(BASE_CUTOFF + waterAmp * 180 + pinkVal * 120, 80), 2500);
+                // 倍音成分を含む最高周波数上限（this.maxFreq）にフィルタースペクトルを制御
+                const targetCutoff = Math.max(this.noteFreq * 1.5, BASE_CUTOFF + waterAmp * 180 + pinkVal * 120);
+                const modCutoff = Math.min(Math.max(targetCutoff, 80), this.maxFreq);
                 this.filter.frequency.setTargetAtTime(modCutoff, now, 0.03);
 
                 const targetGain = Math.min(waterAmp * 0.35 + Math.abs(pinkVal) * 0.03, 0.55);
@@ -540,7 +572,7 @@
             }
         }
 
-        function triggerVoice(freq) {
+        function triggerVoice(freq, maxFreq = 20000) {
             if (!isAudioInit || !audioCtx) return;
 
             const now = audioCtx.currentTime;
@@ -554,7 +586,7 @@
                 voice = voicePool.reduce((oldest, v) => (v.startTime < oldest.startTime ? v : oldest), voicePool[0]);
             }
 
-            voice.play(freq);
+            voice.play(freq, maxFreq);
         }
 
         function getRandomScaleNote() {
@@ -651,6 +683,10 @@
                 this.swimTime = Math.random() * 100;
             }
 
+            getFrequencyRange() {
+                return getFreqRangeForSize(this.sizeMult);
+            }
+
             getNewTarget() {
                 this.target.set(
                     (Math.random() - 0.5) * (CONFIG.waterSize - 2),
@@ -726,8 +762,9 @@
                     }
 
                     if (baseForce > 0.018 && Math.random() < 0.03) {
-                        const scaleNote = getRandomScaleNote();
-                        triggerVoice(scaleNote.freq);
+                        const { minFreq, maxFreq } = this.getFrequencyRange();
+                        const freq = getScaleNoteForRange(minFreq, maxFreq);
+                        triggerVoice(freq, maxFreq);
                     }
                 }
             }
@@ -1199,8 +1236,15 @@
                 // 金魚のパニック・逃走強度をタップ時間に完全同期
                 fishes.forEach(fish => fish.triggerPanic(forceFactor));
 
-                const scaleNote = getRandomScaleNote();
-                triggerVoice(scaleNote.freq);
+                if (fishes.length > 0) {
+                    const randomFish = fishes[Math.floor(Math.random() * fishes.length)];
+                    const { minFreq, maxFreq } = randomFish.getFrequencyRange();
+                    const freq = getScaleNoteForRange(minFreq, maxFreq);
+                    triggerVoice(freq, maxFreq);
+                } else {
+                    const scaleNote = getRandomScaleNote();
+                    triggerVoice(scaleNote.freq, 20000);
+                }
             }
         }
 
