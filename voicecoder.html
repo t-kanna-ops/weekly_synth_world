@@ -16,1620 +16,1215 @@
   <meta name="synth-number" content="#04"> <!-- ナンバリング（省略可） -->
   <!-- ======================================================= -->
 
-    <title>Voice Code Modulator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        cyber: {
-                            bg: '#05070c',
-                            panel: '#0e131f',
-                            card: '#141c2e',
-                            border: '#1d2a45',
-                            cyan: '#06b6d4',
-                            magenta: '#f43f5e',
-                            gold: '#fbbf24',
-                            green: '#10b981',
-                            purple: '#a855f7'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #05070c;
-            color: #e2e8f0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            overflow-x: hidden;
-            user-select: none;
-        }
+  <title>HQ Voice Transformer (SMS & Phase-Locked Vocoder)</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
 
-        /* Cyberpunk Styled Custom Range Inputs */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: #0f172a;
-            border: 1px solid #1e293b;
-            border-radius: 6px;
-            height: 8px;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 18px;
-            width: 18px;
-            border-radius: 4px;
-            background: #06b6d4;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
-            border: 1px solid #67e8f9;
-            transition: all 0.15s ease;
-        }
-        input[type=range]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-            background: #22d3ee;
-            box-shadow: 0 0 15px rgba(34, 211, 238, 1);
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        /* Formant Specific Purple Range Input */
-        input[type=range].formant-slider::-webkit-slider-thumb {
-            background: #a855f7;
-            box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
-            border-color: #e9d5ff;
-        }
-        input[type=range].formant-slider::-webkit-slider-thumb:hover {
-            background: #c084fc;
-            box-shadow: 0 0 15px rgba(192, 132, 252, 1);
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
 
-        /* Retune Speed Rose Range Input */
-        input[type=range].retune-slider::-webkit-slider-thumb {
-            background: #f43f5e;
-            box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
-            border-color: #fda4af;
-        }
+    .container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        canvas {
-            image-rendering: pixelated;
-        }
+    header {
+      text-align: center;
+      padding: 12px 0;
+    }
 
-        .glow-cyan { text-shadow: 0 0 8px rgba(6, 182, 212, 0.6); }
-        .glow-rose { text-shadow: 0 0 8px rgba(244, 63, 94, 0.6); }
-        .glow-purple { text-shadow: 0 0 8px rgba(168, 85, 247, 0.6); }
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
 
-        .preset-btn {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .preset-btn.active {
-            border-color: #a855f7;
-            background: rgba(168, 85, 247, 0.2);
-            box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);
-        }
-    </style>
+    header p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #cbd5e1;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      flex: 1;
+      min-width: 110px;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: white;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-accent { background-color: var(--accent); }
+    .btn-accent:hover { background-color: var(--accent-hover); }
+    .btn-danger { background-color: var(--danger); }
+    .btn-danger:hover { background-color: var(--danger-hover); }
+    .btn-secondary { background-color: #475569; }
+    .btn-secondary:hover { background-color: #334155; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 500px) {
+      .preset-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .btn-preset {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 8px;
+      font-size: 0.8rem;
+    }
+    .btn-preset:hover, .btn-preset.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+    }
+
+    .control-value {
+      font-family: monospace;
+      color: #60a5fa;
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 3px;
+      background: #334155;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    select {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+
+    .switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #475569;
+      transition: .2s;
+      border-radius: 22px;
+    }
+
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 16px; width: 16px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider-toggle { background-color: var(--primary); }
+    input:checked + .slider-toggle:before { transform: translateX(18px); }
+
+    .hud-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 8px;
+    }
+
+    .pitch-note {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #38bdf8;
+      width: 50px;
+      font-family: monospace;
+    }
+
+    .pitch-meter-bg {
+      flex: 1;
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      margin: 0 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pitch-meter-pointer {
+      position: absolute;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      background: #10b981;
+      left: 50%;
+      transform: translateX(-50%);
+      transition: left 0.08s ease-out;
+      border-radius: 2px;
+    }
+
+    .pitch-meter-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background: #94a3b8;
+    }
+
+    .freq-display {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: monospace;
+      width: 70px;
+      text-align: right;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100px;
+      background: #090d16;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+      display: block;
+    }
+
+    .badge-hq {
+      background: linear-gradient(45deg, #10b981, #06b6d4);
+      color: black;
+      font-weight: 800;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .rec-status {
+      font-size: 0.75rem;
+      color: #ef4444;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: bold;
+    }
+
+    .rec-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.3; }
+      100% { opacity: 1; }
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col p-2 sm:p-4 text-gray-200">
+<body>
 
-    <header class="max-w-7xl w-full mx-auto mb-3 flex flex-col sm:flex-row justify-between items-center bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-2xl">
-        <div class="flex items-center gap-3 mb-2 sm:mb-0">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-cyan-500 to-rose-500 flex items-center justify-center font-black text-xl text-black shadow-lg shadow-purple-500/20">
-                DSP
-            </div>
-            <div>
-                <h1 class="text-base sm:text-lg font-extrabold tracking-wider text-white flex items-center gap-2">
-                    HUMAN ERGONOMICS VOICE TRANSFORMER
-                    <span id="qualityBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">QUALITY 1.0x (FFT 2048)</span>
-                </h1>
-                <p class="text-xs text-gray-400">リアルタイム音声変換・録音ループ再生・オートチューン・WAV書き出し</p>
-            </div>
+<div class="container">
+  <header>
+    <h1>リアルタイム高音質ボイスチェンジャー</h1>
+    <p>SMSノイズ合成 ✕ Phase-Locked Vocoder ✕ 人間工学モデル ✕ オートチューン</p>
+  </header>
+
+  <!-- オーディオ入出力・録音管理 -->
+  <div class="card">
+    <div class="card-title">
+      <span>オーディオ操作 & 録音ステーション</span>
+      <span id="recStatusDisplay" style="display:none;" class="rec-status"><span class="rec-dot"></span> 録音中 <span id="recTimer">00:00</span></span>
+    </div>
+    <div class="btn-group">
+      <button id="btnStart" class="btn-primary">🎙️ マイク開始</button>
+      <button id="btnRecord" class="btn-danger" disabled>🔴 録音開始</button>
+      <button id="btnPlayLoop" class="btn-accent" disabled>🔄 ループ再生</button>
+      <button id="btnExport" class="btn-secondary" disabled>💾 WAV保存</button>
+    </div>
+  </div>
+
+  <!-- 人間工学ボイスチェンジャー & プリセット -->
+  <div class="card">
+    <div class="card-title">
+      <span>人間工学ボイスチェンジャー（フォルマント＆骨格補正）</span>
+      <span class="badge-hq">HQ Model</span>
+    </div>
+    <div class="control-group">
+      <label class="control-label">ボイスプリセット</label>
+      <div class="preset-grid">
+        <button class="btn-preset" onclick="applyPreset('male')">👨 男性</button>
+        <button class="btn-preset" onclick="applyPreset('female')">👩 女性</button>
+        <button class="btn-preset" onclick="applyPreset('boy')">👦 男の子</button>
+        <button class="btn-preset" onclick="applyPreset('girl')">👧 女の子</button>
+        <button class="btn-preset" onclick="applyPreset('grandpa')">👴 おじいさん</button>
+        <button class="btn-preset" onclick="applyPreset('grandma')">👵 おばあさん</button>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 12px;">
+      <div>
+        <div class="control-group">
+          <div class="control-label">声体スケール (声道の長さ / フォルマント) <span id="valFormant" class="control-value">1.00x</span></div>
+          <input type="range" id="paramFormant" min="0.5" max="2.0" step="0.01" value="1.00">
         </div>
-
-        <button id="toggleAudioBtn" class="w-full sm:w-auto px-7 py-2.5 rounded-lg font-bold text-xs tracking-widest transition-all duration-300 bg-gradient-to-r from-purple-500 via-cyan-500 to-blue-600 hover:opacity-90 text-black shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">
-            <svg id="playIcon" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            <svg id="stopIcon" class="w-4 h-4 fill-current hidden" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-            <span id="btnText">START DSP ENGINE</span>
-        </button>
-    </header>
-
-    <section class="max-w-7xl w-full mx-auto mb-3 bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-2xl flex flex-col md:flex-row justify-between items-center gap-3">
-        <!-- Source Toggle -->
-        <div class="flex items-center gap-2 bg-black/60 p-1.5 rounded-lg border border-gray-800 w-full md:w-auto justify-center">
-            <span class="text-xs font-bold text-gray-400 pl-2">入力ソース:</span>
-            <button id="srcMicBtn" class="px-3 py-1.5 rounded text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500 shadow-sm">
-                🎙️ マイク入力
-            </button>
-            <button id="srcRecBtn" class="px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300">
-                🔄 録音ループ再生
-            </button>
+        <div class="control-group">
+          <div class="control-label">ピッチシフト (基本音高) <span id="valPitchShift" class="control-value">1.00x</span></div>
+          <input type="range" id="paramPitchShift" min="0.5" max="2.0" step="0.01" value="1.00">
         </div>
-
-        <!-- Recording & Playback Control Buttons -->
-        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-center">
-            <button id="recStartBtn" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-rose-600/30 disabled:opacity-40 disabled:cursor-not-allowed">
-                <span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
-                録音開始
-            </button>
-            <button id="recStopBtn" disabled class="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold text-xs flex items-center gap-1.5 transition-all border border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                ⏹️ 録音停止
-            </button>
-            <button id="loopPlayBtn" disabled class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-purple-600/30 disabled:opacity-40 disabled:cursor-not-allowed">
-                ▶️ ループ再生
-            </button>
-            <button id="exportWavBtn" disabled class="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-black font-extrabold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/30 disabled:opacity-40 disabled:cursor-not-allowed">
-                💾 WAV書き出し
-            </button>
+        <div class="control-group">
+          <div class="control-label">喉の太さ (声帯振動特性) <span id="valThickness" class="control-value">1.00x</span></div>
+          <input type="range" id="paramThickness" min="0.5" max="2.0" step="0.01" value="1.00">
         </div>
-
-        <!-- Recording Status Bar -->
-        <div class="flex items-center gap-3 bg-black/60 px-3 py-1.5 rounded-lg border border-gray-800 w-full md:w-auto justify-between md:justify-end">
-            <span id="recStatusText" class="text-xs font-mono text-gray-400">Status: 待機中</span>
-            <span id="recTimeText" class="text-xs font-mono font-bold text-cyan-400">00:00.0</span>
+      </div>
+      <div>
+        <div class="control-group">
+          <div class="control-label">骨格共鳴 (低域ブースト) <span id="valResonance" class="control-value">1.00x</span></div>
+          <input type="range" id="paramResonance" min="0.5" max="2.0" step="0.01" value="1.00">
         </div>
-    </section>
+        <div class="control-group">
+          <div class="control-label">加齢・しわがれ度 (微細ゆらぎ) <span id="valAge" class="control-value">0.00</span></div>
+          <input type="range" id="paramAge" min="0.00" max="1.00" step="0.01" value="0.00">
+        </div>
+        <div class="control-group">
+          <div class="control-label">声の張り・明瞭度 (高域強さ) <span id="valClarity" class="control-value">1.00x</span></div>
+          <input type="range" id="paramClarity" min="0.5" max="2.0" step="0.01" value="1.00">
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <main class="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
+  <!-- ピッチコレクト & ケロケロボイス (Auto-Tune) -->
+  <div class="card">
+    <div class="card-title">
+      <div class="toggle-row" style="width: 100%;">
+        <span>リアルタイム・ピッチコレクト (オートチューン)</span>
+        <label class="switch">
+          <input type="checkbox" id="paramPitchCorrectToggle" checked>
+          <span class="slider-toggle"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- HUD メーター -->
+    <div class="hud-container">
+      <div id="hudNote" class="pitch-note">--</div>
+      <div class="pitch-meter-bg">
+        <div class="pitch-meter-center"></div>
+        <div id="hudPointer" class="pitch-meter-pointer"></div>
+      </div>
+      <div id="hudFreq" class="freq-display">0.0 Hz</div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="control-group">
+          <label class="control-label">ルートキー (Root Key)</label>
+          <select id="paramRootKey">
+            <option value="0">C</option><option value="1">C# / Db</option><option value="2">D</option>
+            <option value="3">D# / Eb</option><option value="4">E</option><option value="5">F</option>
+            <option value="6">F# / Gb</option><option value="7">G</option><option value="8">G# / Ab</option>
+            <option value="9">A</option><option value="10">A# / Bb</option><option value="11">B</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label">ターゲット・スケール</label>
+          <select id="paramScale">
+            <option value="chromatic">Chromatic (全半音)</option>
+            <option value="major">Major Scale</option>
+            <option value="minor">Natural Minor Scale</option>
+            <option value="pentatonic">Pentatonic Scale</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="control-group">
+          <div class="control-label">ケロケロ速度 (Retune Speed) <span id="valRetuneSpeed" class="control-value">80%</span></div>
+          <input type="range" id="paramRetuneSpeed" min="0.0" max="1.0" step="0.01" value="0.80">
+        </div>
+        <div class="control-group">
+          <div class="control-label">補正強度 (Correction Amount) <span id="valCorrectionAmount" class="control-value">100%</span></div>
+          <input type="range" id="paramCorrectionAmount" min="0.0" max="1.0" step="0.01" value="1.00">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 音質 & 信号処理パラメータ (SMS & Phase Lock) -->
+  <div class="card">
+    <div class="card-title">音質・音響信号処理設定</div>
+    <div class="grid-2">
+      <div>
+        <div class="control-group">
+          <div class="control-label">SMS 子音・ノイズ復元 (Noise Blend) <span id="valNoiseBlend" class="control-value">0.70</span></div>
+          <input type="range" id="paramNoiseBlend" min="0.0" max="1.0" step="0.01" value="0.70">
+        </div>
+        <div class="control-group">
+          <div class="control-label">合成サイン波本数 (Partials) <span id="valSineCount" class="control-value">256本</span></div>
+          <input type="range" id="paramSineCount" min="36" max="512" step="4" value="256">
+        </div>
+        <div class="control-group">
+          <div class="control-label">合成波形タイプ</div>
+          <select id="paramWaveform">
+            <option value="sine">サイン波 (基本・滑らか)</option>
+            <option value="triangle">三角波 (やや明るい)</option>
+            <option value="sawtooth">鋸歯状波 (エッジの効いた声)</option>
+            <option value="square">矩形波 (中空レトロ音)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="control-group">
+          <div class="control-label">ノイズリダクション閾値 <span id="valNoiseThresh" class="control-value">0.000005</span></div>
+          <input type="range" id="paramNoiseThresh" min="0.000000" max="0.000500" step="0.000001" value="0.000005">
+        </div>
+        <div class="control-group">
+          <div class="control-label">処理クオリティ (オーバーラップ/FFT) <span id="valQuality" class="control-value">1.0x (標準)</span></div>
+          <input type="range" id="paramQuality" min="0.5" max="2.0" step="0.5" value="1.0">
+        </div>
+        <div class="toggle-row" style="margin-top: 8px;">
+          <span style="font-size: 0.8rem; color: #cbd5e1;">Phase-Lock (位相固定・芯の保持)</span>
+          <label class="switch">
+            <input type="checkbox" id="paramPhaseLock" checked>
+            <span class="slider-toggle"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- リアルタイム・スペクトログラム -->
+  <div class="card">
+    <div class="card-title">リアルタイム・スペクトラム / フォルマント可視化</div>
+    <canvas id="canvasSpectrogram"></canvas>
+  </div>
+</div>
+
+<script>
+/**
+ * AudioWorklet 内で動作する SMS & Phase-Locked Vocoder プロセッサコード
+ */
+const workletCode = `
+class HQVoiceProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.FFT_SIZE = 2048;
+    this.HOP_SIZE = 512;
+    this.sampleRate = 44100;
+
+    // パラメータ
+    this.sineCount = 256;
+    this.noiseThreshold = 0.000005;
+    this.waveformType = 'sine';
+    this.qualityFactor = 1.0;
+    this.noiseBlend = 0.70;
+    this.usePhaseLock = true;
+
+    // 人間工学
+    this.formantScale = 1.0;
+    this.pitchShift = 1.0;
+    this.thickness = 1.0;
+    this.resonance = 1.0;
+    this.age = 0.0;
+    this.clarity = 1.0;
+
+    // オートチューン
+    this.pitchCorrect = true;
+    this.rootKey = 0;
+    this.scaleType = 'chromatic';
+    this.retuneSpeed = 0.80;
+    this.correctionAmount = 1.00;
+
+    this.currentSmoothedRatio = 1.0;
+
+    // バッファ
+    this.inputBuffer = new Float32Array(this.FFT_SIZE);
+    this.inputBufferHead = 0;
+    this.window = new Float32Array(this.FFT_SIZE);
+    for (let i = 0; i < this.FFT_SIZE; i++) {
+      // Hanning Window
+      this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / this.FFT_SIZE));
+    }
+
+    this.prevPhases = new Float32Array(this.FFT_SIZE / 2);
+    this.synthPhases = new Float32Array(this.FFT_SIZE / 2);
+
+    // オシレータ状態
+    this.oscillators = Array.from({ length: 512 }, () => ({
+      freq: 0, targetFreq: 0,
+      amp: 0, targetAmp: 0,
+      phase: Math.random() * Math.PI * 2,
+      bw: 0
+    }));
+
+    // ノイズ残差シェイパー用（SMS）
+    this.noiseBands = new Float32Array(16);
+    this.targetNoiseBands = new Float32Array(16);
+
+    this.fftReal = new Float32Array(this.FFT_SIZE);
+    this.fftImag = new Float32Array(this.FFT_SIZE);
+
+    this.port.onmessage = (e) => {
+      const data = e.data;
+      if (data.type === 'param') {
+        this[data.key] = data.value;
+        if (data.key === 'qualityFactor') this.updateQuality(data.value);
+      }
+    };
+  }
+
+  updateQuality(factor) {
+    if (factor >= 2.0) {
+      this.FFT_SIZE = 4096;
+      this.HOP_SIZE = 256;
+    } else if (factor <= 0.5) {
+      this.FFT_SIZE = 1024;
+      this.HOP_SIZE = 512;
+    } else {
+      this.FFT_SIZE = 2048;
+      this.HOP_SIZE = 512;
+    }
+    this.inputBuffer = new Float32Array(this.FFT_SIZE);
+    this.inputBufferHead = 0;
+    this.window = new Float32Array(this.FFT_SIZE);
+    for (let i = 0; i < this.FFT_SIZE; i++) {
+      this.window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / this.FFT_SIZE));
+    }
+    this.prevPhases = new Float32Array(this.FFT_SIZE / 2);
+    this.synthPhases = new Float32Array(this.FFT_SIZE / 2);
+    this.fftReal = new Float32Array(this.FFT_SIZE);
+    this.fftImag = new Float32Array(this.FFT_SIZE);
+  }
+
+  // 簡易 Cooley-Tukey FFT
+  fft(real, imag) {
+    const n = real.length;
+    for (let i = 0; i < n; i++) {
+      let j = 0;
+      for (let bit = (n >> 1), k = i; bit > 0; bit >>= 1, k >>= 1) {
+        if (k & 1) j |= bit;
+      }
+      if (j > i) {
+        let tr = real[i]; real[i] = real[j]; real[j] = tr;
+        let ti = imag[i]; imag[i] = imag[j]; imag[j] = ti;
+      }
+    }
+    for (let len = 2; len <= n; len <<= 1) {
+      const half = len >> 1;
+      const angle = -2 * Math.PI / len;
+      const wstepR = Math.cos(angle);
+      const wstepI = Math.sin(angle);
+      for (let i = 0; i < n; i += len) {
+        let wR = 1, wI = 0;
+        for (let j = 0; j < half; j++) {
+          const uR = real[i + j], uI = imag[i + j];
+          const vR = real[i + j + half] * wR - imag[i + j + half] * wI;
+          const vI = real[i + j + half] * wI + imag[i + j + half] * wR;
+          real[i + j] = uR + vR; imag[i + j] = uI + vI;
+          real[i + j + half] = uR - vR; imag[i + j + half] = uI - vI;
+          const nextR = wR * wstepR - wI * wstepI;
+          wI = wR * wstepI + wI * wstepR;
+          wR = nextR;
+        }
+      }
+    }
+  }
+
+  process(inputs, outputs) {
+    const input = inputs[0][0];
+    const output = outputs[0][0];
+    if (!input) return true;
+
+    for (let i = 0; i < input.length; i++) {
+      this.inputBuffer[this.inputBufferHead] = input[i];
+      this.inputBufferHead++;
+
+      if (this.inputBufferHead >= this.HOP_SIZE) {
+        this.analyzeAndSynthesize();
+        // Shift buffer
+        this.inputBuffer.copyWithin(0, this.HOP_SIZE);
+        this.inputBufferHead -= this.HOP_SIZE;
+      }
+
+      // サンプル単位の合成演算（オシレータバンク ＋ SMSノイズ）
+      let sampleAcc = 0;
+      const activeCount = Math.min(this.sineCount, 512);
+
+      for (let k = 0; k < activeCount; k++) {
+        const osc = this.oscillators[k];
+        osc.freq += (osc.targetFreq - osc.freq) * 0.1;
+        osc.amp += (osc.targetAmp - osc.amp) * 0.1;
+
+        if (osc.amp < 0.000001) continue;
+
+        osc.phase += (2 * Math.PI * osc.freq) / sampleRate;
+        if (osc.phase > Math.PI * 2) osc.phase -= Math.PI * 2;
+
+        let waveVal = 0;
+        switch (this.waveformType) {
+          case 'triangle':
+            waveVal = Math.asin(Math.sin(osc.phase)) * (2 / Math.PI);
+            break;
+          case 'sawtooth':
+            waveVal = (osc.phase / Math.PI) - 1;
+            break;
+          case 'square':
+            waveVal = Math.sin(osc.phase) >= 0 ? 0.7 : -0.7;
+            break;
+          default: // sine
+            waveVal = Math.sin(osc.phase);
+            break;
+        }
+        sampleAcc += waveVal * osc.amp;
+      }
+
+      // SMS (Stochastic Noise Component) の動的加算
+      const whiteNoise = (Math.random() * 2 - 1);
+      let noiseAcc = 0;
+      for (let b = 0; b < 16; b++) {
+        this.noiseBands[b] += (this.targetNoiseBands[b] - this.noiseBands[b]) * 0.05;
+        noiseAcc += whiteNoise * this.noiseBands[b];
+      }
+
+      output[i] = sampleAcc + noiseAcc * this.noiseBlend;
+    }
+    return true;
+  }
+
+  analyzeAndSynthesize() {
+    const numBins = this.FFT_SIZE / 2;
+    for (let i = 0; i < this.FFT_SIZE; i++) {
+      this.fftReal[i] = this.inputBuffer[i] * this.window[i];
+      this.fftImag[i] = 0;
+    }
+
+    this.fft(this.fftReal, this.fftImag);
+
+    const magnitudes = new Float32Array(numBins);
+    const frequencies = new Float32Array(numBins);
+
+    let maxMag = 0;
+    let f0Bin = 0;
+
+    for (let k = 1; k < numBins - 1; k++) {
+      const real = this.fftReal[k];
+      const imag = this.fftImag[k];
+      const mag = Math.sqrt(real * real + imag * imag);
+      magnitudes[k] = mag;
+
+      // 位相解析 & 瞬時周波数
+      const phase = Math.atan2(imag, real);
+      let phaseDiff = phase - this.prevPhases[k];
+      this.prevPhases[k] = phase;
+
+      const expectedPhaseDiff = (2 * Math.PI * k * this.HOP_SIZE) / this.FFT_SIZE;
+      let deltaPhase = phaseDiff - expectedPhaseDiff;
+      deltaPhase = Math.atan2(Math.sin(deltaPhase), Math.cos(deltaPhase));
+
+      const freqDev = (deltaPhase * sampleRate) / (2 * Math.PI * this.HOP_SIZE);
+      frequencies[k] = (k * sampleRate) / this.FFT_SIZE + freqDev;
+
+      // f0 (基音) 候補検索 (ヴォーカル帯域 70Hz - 800Hz)
+      const binFreq = (k * sampleRate) / this.FFT_SIZE;
+      if (binFreq >= 70 && binFreq <= 800) {
+        if (mag > maxMag) {
+          maxMag = mag;
+          f0Bin = k;
+        }
+      }
+    }
+
+    // 基本周波数の算出とオートチューン計算
+    let f0 = frequencies[f0Bin] || 0;
+    let pitchRatio = 1.0;
+
+    if (f0 > 70 && f0 < 800 && this.pitchCorrect) {
+      const targetFreq = this.snapToScale(f0, this.rootKey, this.scaleType);
+      const rawRatio = targetFreq / f0;
+      const targetRatio = 1.0 + (rawRatio - 1.0) * this.correctionAmount;
+
+      // Retune Speed によるケロケロ平滑化
+      this.currentSmoothedRatio += (targetRatio - this.currentSmoothedRatio) * (0.05 + this.retuneSpeed * 0.9);
+      pitchRatio = this.currentSmoothedRatio;
+
+      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: targetFreq });
+    } else {
+      this.port.postMessage({ type: 'hud', f0: f0, targetFreq: f0 });
+    }
+
+    // 上位振幅ピークの抽出 (Partials)
+    const peaks = [];
+    for (let k = 1; k < numBins - 1; k++) {
+      const mag = magnitudes[k];
+      if (mag > this.noiseThreshold) {
+        // ローカルピーク検出
+        if (mag > magnitudes[k - 1] && mag > magnitudes[k + 1]) {
+          peaks.push({ bin: k, mag: mag, freq: frequencies[k] });
+        }
+      }
+    }
+
+    peaks.sort((a, b) => b.mag - a.mag);
+
+    // 人間工学パラメーターと総合ピッチ・フォルマント倍率
+    const totalPitchScale = this.pitchShift * pitchRatio;
+    const totalFormantScale = this.formantScale;
+
+    const activeCount = Math.min(this.sineCount, 512);
+
+    // SMS ノイズ残差の計算準備
+    const noiseResidualBins = new Float32Array(16);
+
+    for (let i = 0; i < activeCount; i++) {
+      if (i < peaks.length) {
+        const peak = peaks[i];
+        let freq = peak.freq;
+        let amp = peak.mag / (this.FFT_SIZE / 4);
+
+        // 人間工学変換 (フォルマント保持 ＆ 声道補正)
+        let shiftedFreq = freq * totalPitchScale;
         
-        <section class="lg:col-span-7 flex flex-col gap-3">
-            
-            <!-- AUTO-TUNE PITCH & FORMANT HUD -->
-            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col justify-between">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="flex items-center gap-2">
-                        <span id="hudPing" class="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping"></span>
-                        <h2 class="text-xs font-bold tracking-wider text-purple-400 uppercase">PITCH & FORMANT MONITOR</h2>
-                    </div>
-                    <span id="pitchStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">PITCH LOCK OFF</span>
-                </div>
-
-                <div class="grid grid-cols-12 gap-2 items-center my-1">
-                    <div class="col-span-4 sm:col-span-3 bg-black/60 p-3 rounded-xl border border-cyber-border flex flex-col items-center justify-center min-h-[95px]">
-                        <span class="text-[10px] text-gray-500 uppercase font-mono">TARGET NOTE</span>
-                        <span id="detectedNoteDisp" class="text-3xl sm:text-4xl font-black text-purple-300 tracking-tighter glow-purple">--</span>
-                        <span id="targetFreqDisp" class="text-[10px] font-mono text-purple-400/80">-- Hz Target</span>
-                    </div>
-
-                    <div class="col-span-8 sm:col-span-9 bg-black/60 p-3 rounded-xl border border-cyber-border flex flex-col justify-center min-h-[95px] gap-2">
-                        <div class="flex justify-between items-center text-xs font-mono">
-                            <span class="text-gray-400">DETECTED f₀: <span id="f0Disp" class="text-white font-bold">-- Hz</span></span>
-                            <span class="text-gray-400">CENTS ERROR: <span id="centsDisp" class="text-cyan-400 font-bold">0.0 cents</span></span>
-                        </div>
-
-                        <div class="relative w-full h-6 bg-gray-950 rounded-md border border-gray-800 overflow-hidden flex items-center justify-center">
-                            <div class="absolute w-0.5 h-full bg-cyan-400 z-10 shadow-lg shadow-cyan-400"></div>
-                            <div class="absolute w-1/6 h-full bg-purple-500/10 border-x border-purple-500/30"></div>
-                            <div id="centsNeedle" class="absolute h-full w-2.5 bg-gradient-to-r from-rose-500 to-purple-400 rounded transition-all duration-75 shadow-lg shadow-purple-500/80" style="left: 50%;"></div>
-                        </div>
-
-                        <div class="flex justify-between text-[9px] font-mono text-gray-500 px-1">
-                            <span>-50 cents</span>
-                            <span>-25</span>
-                            <span class="text-purple-400 font-bold">0 (PERFECT LOCK)</span>
-                            <span>+25</span>
-                            <span>+50 cents</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FFT SPECTRUM & FORMANT ENVELOPE CANVAS -->
-            <div class="bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-xl flex flex-col">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xs font-bold text-gray-300 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-                        FFT SPECTRUM vs TRANSFORMED ADDITIVE SINES
-                    </h2>
-                    <span class="text-[10px] font-mono text-gray-500">0 Hz - 22 kHz</span>
-                </div>
-                <div class="relative w-full h-44 sm:h-52 bg-black/80 rounded-lg overflow-hidden border border-gray-800">
-                    <canvas id="spectrumCanvas" class="w-full h-full block"></canvas>
-                </div>
-            </div>
-
-            <!-- WATERFALL SPECTROGRAM CANVAS -->
-            <div class="bg-cyber-panel p-3.5 rounded-xl border border-cyber-border shadow-xl flex flex-col flex-1">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-xs font-bold text-rose-400 flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-rose-400"></span>
-                        TIME-FREQUENCY WATERFALL SPECTROGRAM
-                    </h2>
-                    <span class="text-[10px] font-mono text-gray-500">Log Intensity</span>
-                </div>
-                <div class="relative w-full h-44 sm:h-52 bg-black/80 rounded-lg overflow-hidden border border-gray-800 flex-1">
-                    <canvas id="spectrogramCanvas" class="w-full h-full block"></canvas>
-                </div>
-            </div>
-        </section>
-
-        <section class="lg:col-span-5 flex flex-col gap-3">
-            
-            <!-- PANEL 1: ERGONOMICS VOICE TRANSFORMER -->
-            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
-                <div class="flex justify-between items-center pb-2 border-b border-gray-800">
-                    <h3 class="text-xs font-bold tracking-wider text-purple-400 uppercase flex items-center gap-2 glow-purple">
-                        🗣️ HUMAN ERGONOMICS TRANSFORMER
-                    </h3>
-                    <span class="text-[10px] font-mono text-purple-300">Vocal Tract Model</span>
-                </div>
-
-                <!-- 6 Human Ergonomics Presets -->
-                <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="male">
-                        <span class="text-base">👨</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">男性</span>
-                    </button>
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="female">
-                        <span class="text-base">👩</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">女性</span>
-                    </button>
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="boy">
-                        <span class="text-base">👦</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">男の子</span>
-                    </button>
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="girl">
-                        <span class="text-base">👧</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">女の子</span>
-                    </button>
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="oldman">
-                        <span class="text-base">👴</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">おじいさん</span>
-                    </button>
-                    <button class="preset-btn bg-black/60 border border-gray-800 rounded-lg p-2 flex flex-col items-center justify-center hover:border-purple-500" data-preset="oldwoman">
-                        <span class="text-base">👵</span>
-                        <span class="text-[10px] font-bold text-gray-300 mt-0.5">おばあさん</span>
-                    </button>
-                </div>
-
-                <!-- Formant Shift (0.50x to 2.00x) -->
-                <div class="flex flex-col gap-1 mt-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="formantScaleSlider" class="font-bold text-purple-300">Formant Shift (声道長スケーリング)</label>
-                        <span id="formantScaleVal" class="font-mono text-purple-400 font-bold">1.00x (Standard)</span>
-                    </div>
-                    <input type="range" id="formantScaleSlider" min="0.5" max="2.0" value="1.0" step="0.01" class="w-full formant-slider">
-                    <p class="text-[10px] text-gray-400">1.0未満で太い骨格(男性風)、1.0超で短い声道(女性・子供風)。</p>
-                </div>
-
-                <!-- Pitch Shift (-12 to +12 Semitones) -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="pitchShiftSlider" class="font-bold text-cyan-300">Pitch Shift (声帯ピッチシフト)</label>
-                        <span id="pitchShiftVal" class="font-mono text-cyan-400 font-bold">0 Semitones</span>
-                    </div>
-                    <input type="range" id="pitchShiftSlider" min="-12" max="12" value="0" step="1" class="w-full">
-                </div>
-
-                <!-- Spectral Tilt (-5.0 to +5.0) -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="spectralTiltSlider" class="text-gray-300">Spectral Tilt / Age Character (年齢質感)</label>
-                        <span id="spectralTiltVal" class="font-mono text-yellow-400 font-bold">0.0 (Neutral)</span>
-                    </div>
-                    <input type="range" id="spectralTiltSlider" min="-5.0" max="5.0" value="0.0" step="0.1" class="w-full">
-                </div>
-
-                <!-- Age Tremolo / Vibrato (0% to 100%) -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="tremoloSlider" class="text-gray-300">Age Tremolo / Vibrato (神経性震え)</label>
-                        <span id="tremoloVal" class="font-mono text-rose-400 font-bold">0%</span>
-                    </div>
-                    <input type="range" id="tremoloSlider" min="0" max="100" value="0" step="1" class="w-full">
-                </div>
-            </div>
-
-            <!-- PANEL 2: WAVEFORM SELECT & HARD AUTO-TUNE -->
-            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
-                <div class="flex justify-between items-center pb-2 border-b border-gray-800">
-                    <h3 class="text-xs font-bold tracking-wider text-rose-400 uppercase flex items-center gap-2 glow-rose">
-                        🎤 SYNTH WAVEFORM & HARD AUTO-TUNE
-                    </h3>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="pitchCorrectToggle" class="sr-only peer" checked>
-                        <div class="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
-                    </label>
-                </div>
-
-                <!-- Synth Waveform Selection -->
-                <div class="flex flex-col gap-1">
-                    <label for="waveformSelect" class="text-xs font-medium text-gray-300">Synthesizer Waveform (合成波形)</label>
-                    <select id="waveformSelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
-                        <option value="sine" selected>Sine Wave (サイン波 - ピュア音)</option>
-                        <option value="triangle">Triangle Wave (三角波 - 温かみのある丸み音)</option>
-                        <option value="square">Square Wave (矩形波 - 8bitファミコン風音)</option>
-                        <option value="sawtooth">Sawtooth Wave (鋸歯状波 - 煌びやかなリード音)</option>
-                    </select>
-                </div>
-
-                <!-- Root Key & Scale -->
-                <div class="grid grid-cols-12 gap-2">
-                    <div class="col-span-4 flex flex-col gap-1">
-                        <label for="rootKeySelect" class="text-xs font-medium text-gray-300">Root Key</label>
-                        <select id="rootKeySelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
-                            <option value="0">C</option>
-                            <option value="1">C# / Db</option>
-                            <option value="2">D</option>
-                            <option value="3">D# / Eb</option>
-                            <option value="4">E</option>
-                            <option value="5">F</option>
-                            <option value="6">F# / Gb</option>
-                            <option value="7">G</option>
-                            <option value="8">G# / Ab</option>
-                            <option value="9">A</option>
-                            <option value="10">A# / Bb</option>
-                            <option value="11">B</option>
-                        </select>
-                    </div>
-
-                    <div class="col-span-8 flex flex-col gap-1">
-                        <label for="scaleSelect" class="text-xs font-medium text-gray-300">Target Scale / Mode</label>
-                        <select id="scaleSelect" class="bg-black/80 border border-gray-700 text-cyan-300 text-xs rounded-lg p-2 font-mono focus:border-cyan-500">
-                            <option value="chromatic" selected>Chromatic (All Semitones)</option>
-                            <option value="major">Major Scale (Ionian)</option>
-                            <option value="minor">Natural Minor Scale</option>
-                            <option value="pentatonic">Minor Pentatonic</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Retune Speed -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="retuneSpeedSlider" class="font-bold text-rose-400">Retune Speed (ケロケロ度)</label>
-                        <span id="retuneSpeedVal" class="font-mono text-rose-400 font-bold">100% (Instant Snap)</span>
-                    </div>
-                    <input type="range" id="retuneSpeedSlider" min="0" max="1" value="1.0" step="0.01" class="w-full retune-slider">
-                </div>
-
-                <!-- Correction Amount -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="correctAmountSlider" class="text-gray-300">Correction Amount (補正強度)</label>
-                        <span id="correctAmountVal" class="font-mono text-cyan-400 font-bold">100%</span>
-                    </div>
-                    <input type="range" id="correctAmountSlider" min="0" max="1" value="1.0" step="0.01" class="w-full">
-                </div>
-            </div>
-
-            <!-- PANEL 3: DSP RESOLUTION & ADVANCED CONTROLS -->
-            <div class="bg-cyber-panel p-4 rounded-xl border border-cyber-border shadow-xl flex flex-col gap-3">
-                <h3 class="text-xs font-bold tracking-wider text-cyan-400 uppercase pb-2 border-b border-gray-800 glow-cyan">
-                    🎛️ DSP RESOLUTION & FINE CONTROLS
-                </h3>
-
-                <!-- Quality Factor -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="qualitySlider" class="font-bold text-cyan-300">Quality Factor (処理解像度)</label>
-                        <span id="qualityVal" class="font-mono text-cyan-400 font-bold">1.0x (Standard)</span>
-                    </div>
-                    <input type="range" id="qualitySlider" min="0.5" max="2.0" value="1.0" step="0.5" class="w-full">
-                </div>
-
-                <!-- Max Oscillators -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="topNSlider" class="font-medium text-pink-300">Max Waves (16〜1024本)</label>
-                        <span id="topNVal" class="font-mono text-pink-400 font-bold">512 Waves</span>
-                    </div>
-                    <input type="range" id="topNSlider" min="16" max="1024" value="512" step="16" class="w-full">
-                </div>
-
-                <!-- Noise Threshold (Fine Granular) -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-xs">
-                        <label for="threshSlider" class="text-gray-300">Noise Threshold (ノイズ除去)</label>
-                        <span id="threshVal" class="font-mono text-yellow-400 font-bold">0.000000 (Disabled)</span>
-                    </div>
-                    <input type="range" id="threshSlider" min="0.000000" max="0.001000" value="0.000000" step="0.000001" class="w-full">
-                </div>
-
-                <!-- Mix & Volume -->
-                <div class="grid grid-cols-2 gap-3 pt-1">
-                    <div class="flex flex-col gap-1">
-                        <div class="flex justify-between text-xs">
-                            <label for="dryWetSlider" class="text-gray-300">Dry / Wet Mix</label>
-                            <span id="dryWetVal" class="font-mono text-cyan-400 font-bold">100%</span>
-                        </div>
-                        <input type="range" id="dryWetSlider" min="0" max="1" value="1" step="0.01" class="w-full">
-                    </div>
-
-                    <div class="flex flex-col gap-1">
-                        <div class="flex justify-between text-xs">
-                            <label for="masterGainSlider" class="text-gray-300">Master Vol</label>
-                            <span id="masterGainVal" class="font-mono text-gray-300">1.0x</span>
-                        </div>
-                        <input type="range" id="masterGainSlider" min="0" max="2" value="1.0" step="0.05" class="w-full">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-xs pt-1">
-                    <div class="bg-black/60 p-2 rounded border border-gray-800">
-                        <span class="text-gray-500 block text-[10px]">ACTIVE WAVES</span>
-                        <span id="activeSinesDisp" class="font-mono font-bold text-purple-400">0 / 512</span>
-                    </div>
-                    <div class="bg-black/60 p-2 rounded border border-gray-800">
-                        <span class="text-gray-500 block text-[10px]">COMBINED PITCH RATIO</span>
-                        <span id="pitchRatioDisp" class="font-mono font-bold text-cyan-400">1.000x</span>
-                    </div>
-                </div>
-
-                <!-- Level Meter -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between text-[10px] text-gray-400">
-                        <span>PEAK OUTPUT LEVEL</span>
-                        <span id="peakLevelDb">-inf dB</span>
-                    </div>
-                    <div class="w-full bg-black/90 h-2.5 rounded-full overflow-hidden p-0.5 border border-gray-800">
-                        <div id="meterBar" class="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-rose-500 rounded-full w-0 transition-all duration-75"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <script>
-        /**
-         * Inline AudioWorkletProcessor Code
-         * Fast Cooley-Tukey FFT, Phase Vocoder, Formant Shifter, Hard Auto-Tune, and Additive Wave Synthesizer
-         */
-        const workletProcessorCode = `
-            class HumanErgonomicsVocoderProcessor extends AudioWorkletProcessor {
-                constructor() {
-                    super();
-                    this.fftSize = 2048;
-                    this.hopSize = 512;
-                    this.initBuffers();
-
-                    this.maxTopN = 512;
-                    this.dryWet = 1.0;
-                    this.inputGain = 1.0;
-                    this.masterGain = 1.0;
-                    this.threshold = 0.0;
-                    this.waveform = 'sine';
-
-                    this.formantScale = 1.0;
-                    this.pitchShiftSemitones = 0;
-                    this.spectralTilt = 0.0;
-                    this.tremoloAmount = 0.0;
-
-                    this.pitchCorrectEnabled = true;
-                    this.rootKey = 0;
-                    this.selectedScale = 'chromatic';
-                    this.retuneSpeed = 1.0;
-                    this.correctAmount = 1.0;
-
-                    this.currentRatioR = 1.0;
-                    this.lfoPhase = 0.0;
-
-                    this.port.onmessage = (e) => {
-                        const d = e.data;
-                        if (d.type === 'reconfig') {
-                            this.fftSize = d.fftSize;
-                            this.hopSize = d.hopSize;
-                            this.initBuffers();
-                        } else {
-                            if (d.maxTopN !== undefined) this.maxTopN = d.maxTopN;
-                            if (d.dryWet !== undefined) this.dryWet = d.dryWet;
-                            if (d.inputGain !== undefined) this.inputGain = d.inputGain;
-                            if (d.masterGain !== undefined) this.masterGain = d.masterGain;
-                            if (d.threshold !== undefined) this.threshold = d.threshold;
-                            if (d.waveform !== undefined) this.waveform = d.waveform;
-
-                            if (d.formantScale !== undefined) this.formantScale = d.formantScale;
-                            if (d.pitchShiftSemitones !== undefined) this.pitchShiftSemitones = d.pitchShiftSemitones;
-                            if (d.spectralTilt !== undefined) this.spectralTilt = d.spectralTilt;
-                            if (d.tremoloAmount !== undefined) this.tremoloAmount = d.tremoloAmount;
-
-                            if (d.pitchCorrectEnabled !== undefined) this.pitchCorrectEnabled = d.pitchCorrectEnabled;
-                            if (d.rootKey !== undefined) this.rootKey = d.rootKey;
-                            if (d.selectedScale !== undefined) this.selectedScale = d.selectedScale;
-                            if (d.retuneSpeed !== undefined) this.retuneSpeed = d.retuneSpeed;
-                            if (d.correctAmount !== undefined) this.correctAmount = d.correctAmount;
-                        }
-                    };
-                }
-
-                initBuffers() {
-                    this.numBins = this.fftSize / 2;
-                    this.inputRingBuffer = new Float32Array(this.fftSize);
-                    this.inputWritePos = 0;
-                    this.hopCounter = 0;
-
-                    this.real = new Float32Array(this.fftSize);
-                    this.imag = new Float32Array(this.fftSize);
-
-                    this.window = new Float32Array(this.fftSize);
-                    const a0 = 0.42, a1 = 0.5, a2 = 0.08;
-                    for (let i = 0; i < this.fftSize; i++) {
-                        this.window[i] = a0 - a1 * Math.cos((2.0 * Math.PI * i) / this.fftSize) + a2 * Math.cos((4.0 * Math.PI * i) / this.fftSize);
-                    }
-
-                    this.prevPhase = new Float32Array(this.numBins);
-                    this.magnitudes = new Float32Array(this.numBins);
-                    this.instFrequencies = new Float32Array(this.numBins);
-
-                    this.oscPhase = new Float32Array(this.numBins);
-                    this.currentAmp = new Float32Array(this.numBins);
-                    this.targetAmp = new Float32Array(this.numBins);
-                    this.stepAmp = new Float32Array(this.numBins);
-
-                    this.currentFreq = new Float32Array(this.numBins);
-                    this.targetFreq = new Float32Array(this.numBins);
-                    this.stepFreq = new Float32Array(this.numBins);
-
-                    this.binIndices = new Uint16Array(this.numBins);
-                    for (let i = 0; i < this.numBins; i++) this.binIndices[i] = i;
-
-                    this.initFFTTables();
-                }
-
-                initFFTTables() {
-                    const N = this.fftSize;
-                    this.bitRev = new Uint32Array(N);
-                    let j = 0;
-                    for (let i = 0; i < N; i++) {
-                        this.bitRev[i] = j;
-                        let m = N >> 1;
-                        while (m >= 1 && j >= m) {
-                            j -= m;
-                            m >>= 1;
-                        }
-                        j += m;
-                    }
-
-                    this.cosTable = new Float32Array(N / 2);
-                    this.sinTable = new Float32Array(N / 2);
-                    for (let i = 0; i < N / 2; i++) {
-                        this.cosTable[i] = Math.cos((-2.0 * Math.PI * i) / N);
-                        this.sinTable[i] = Math.sin((-2.0 * Math.PI * i) / N);
-                    }
-                }
-
-                fft(real, imag) {
-                    const N = this.fftSize;
-                    for (let i = 0; i < N; i++) {
-                        const rev = this.bitRev[i];
-                        if (i < rev) {
-                            let tr = real[i]; real[i] = real[rev]; real[rev] = tr;
-                            let ti = imag[i]; imag[i] = imag[rev]; imag[rev] = ti;
-                        }
-                    }
-
-                    for (let len = 2; len <= N; len <<= 1) {
-                        const halfLen = len >> 1;
-                        const step = N / len;
-                        for (let i = 0; i < N; i += len) {
-                            for (let j = 0; j < halfLen; j++) {
-                                const k = j * step;
-                                const c = this.cosTable[k];
-                                const s = this.sinTable[k];
-                                const ur = real[i + j];
-                                const ui = imag[i + j];
-                                const vr = real[i + j + halfLen] * c - imag[i + j + halfLen] * s;
-                                const vi = real[i + j + halfLen] * s + imag[i + j + halfLen] * c;
-
-                                real[i + j] = ur + vr;
-                                imag[i + j] = ui + vi;
-                                real[i + j + halfLen] = ur - vr;
-                                imag[i + j + halfLen] = ui - vi;
-                            }
-                        }
-                    }
-                }
-
-                detectFundamentalFrequency() {
-                    const binWidth = sampleRate / this.fftSize;
-                    const minBin = Math.max(1, Math.floor(65 / binWidth));
-                    const maxBin = Math.min(this.numBins - 1, Math.ceil(950 / binWidth));
-
-                    let maxMag = 0;
-                    let bestBin = -1;
-
-                    for (let k = minBin; k <= maxBin; k++) {
-                        const mag = this.magnitudes[k];
-                        if (mag > maxMag) {
-                            maxMag = mag;
-                            bestBin = k;
-                        }
-                    }
-
-                    if (bestBin === -1 || maxMag < 0.0001) return 0;
-
-                    for (let k = minBin; k < bestBin; k++) {
-                        if (this.magnitudes[k] > maxMag * 0.4) {
-                            bestBin = k;
-                            break;
-                        }
-                    }
-
-                    return this.instFrequencies[bestBin];
-                }
-
-                calculateTargetPitchRatio(f0) {
-                    if (f0 <= 0 || !this.pitchCorrectEnabled) return 1.0;
-
-                    const exactMIDI = 12 * Math.log2(f0 / 440) + 69;
-                    let targetMIDI = Math.round(exactMIDI);
-
-                    const relativeNote = (((targetMIDI - this.rootKey) % 12) + 12) % 12;
-                    let allowedNotes = [0,1,2,3,4,5,6,7,8,9,10,11];
-
-                    if (this.selectedScale === 'major') allowedNotes = [0, 2, 4, 5, 7, 9, 11];
-                    else if (this.selectedScale === 'minor') allowedNotes = [0, 2, 3, 5, 7, 8, 10];
-                    else if (this.selectedScale === 'pentatonic') allowedNotes = [0, 3, 5, 7, 10];
-
-                    if (allowedNotes.length < 12) {
-                        let minDiff = 99;
-                        let bestNote = relativeNote;
-                        for (let n of allowedNotes) {
-                            let diff = Math.abs(relativeNote - n);
-                            if (diff > 6) diff = 12 - diff;
-                            if (diff < minDiff) {
-                                minDiff = diff;
-                                bestNote = n;
-                            }
-                        }
-                        targetMIDI = targetMIDI - relativeNote + bestNote;
-                    }
-
-                    const fTarget = 440 * Math.pow(2, (targetMIDI - 69) / 12);
-                    const rawRatio = fTarget / f0;
-
-                    return Math.max(0.5, Math.min(2.0, 1.0 + (rawRatio - 1.0) * this.correctAmount));
-                }
-
-                getInterpolatedMagnitude(freq) {
-                    const binWidth = sampleRate / this.fftSize;
-                    const floatBin = freq / binWidth;
-                    if (floatBin <= 0) return this.magnitudes[0];
-                    if (floatBin >= this.numBins - 1) return this.magnitudes[this.numBins - 1];
-
-                    const b0 = Math.floor(floatBin);
-                    const b1 = b0 + 1;
-                    const frac = floatBin - b0;
-
-                    return this.magnitudes[b0] * (1.0 - frac) + this.magnitudes[b1] * frac;
-                }
-
-                analyzeFrame() {
-                    for (let i = 0; i < this.fftSize; i++) {
-                        const idx = (this.inputWritePos - this.fftSize + i + this.fftSize) % this.fftSize;
-                        this.real[i] = this.inputRingBuffer[idx] * this.window[i];
-                        this.imag[i] = 0.0;
-                    }
-
-                    this.fft(this.real, this.imag);
-
-                    const expPhaseAdv = (2.0 * Math.PI * this.hopSize) / this.fftSize;
-
-                    for (let k = 0; k < this.numBins; k++) {
-                        const r = this.real[k];
-                        const im = this.imag[k];
-                        const mag = (Math.sqrt(r * r + im * im) * 2.0) / this.fftSize;
-                        this.magnitudes[k] = mag;
-
-                        const phase = Math.atan2(im, r);
-                        let dPhase = phase - this.prevPhase[k];
-                        this.prevPhase[k] = phase;
-
-                        let dev = dPhase - (k * expPhaseAdv);
-                        dev = dev - 2.0 * Math.PI * Math.round(dev / (2.0 * Math.PI));
-
-                        const freqDev = dev / ((2.0 * Math.PI * this.hopSize) / sampleRate);
-                        let instFreq = (k * (sampleRate / this.fftSize)) + freqDev;
-
-                        if (instFreq < 0) instFreq = 0;
-                        if (instFreq > sampleRate / 2) instFreq = sampleRate / 2;
-
-                        this.instFrequencies[k] = instFreq;
-                    }
-
-                    const f0 = this.detectFundamentalFrequency();
-                    const targetAutoRatio = this.calculateTargetPitchRatio(f0);
-
-                    if (this.retuneSpeed >= 0.99) {
-                        this.currentRatioR = targetAutoRatio;
-                    } else {
-                        const factor = Math.pow(this.retuneSpeed, 2.5) * 0.8 + 0.02;
-                        this.currentRatioR += (targetAutoRatio - this.currentRatioR) * factor;
-                    }
-
-                    const userPitchRatio = Math.pow(2, this.pitchShiftSemitones / 12);
-                    const totalPitchRatio = (this.pitchCorrectEnabled ? this.currentRatioR : 1.0) * userPitchRatio;
-                    const formantF = Math.max(0.5, Math.min(2.0, this.formantScale));
-
-                    const mags = this.magnitudes;
-                    this.binIndices.sort((a, b) => mags[b] - mags[a]);
-
-                    this.targetAmp.fill(0);
-
-                    let activeCount = 0;
-                    const limit = Math.min(this.maxTopN, this.numBins);
-
-                    for (let i = 0; i < limit; i++) {
-                        const binIdx = this.binIndices[i];
-                        const origMag = mags[binIdx];
-
-                        if (origMag >= this.threshold) {
-                            const origFreq = this.instFrequencies[binIdx];
-                            const synthFreq = Math.min(sampleRate / 2, origFreq * totalPitchRatio);
-                            const lookupFreq = synthFreq / formantF;
-
-                            let transformedMag = this.getInterpolatedMagnitude(lookupFreq);
-
-                            if (this.spectralTilt !== 0) {
-                                const normFreq = Math.max(100, synthFreq) / 1000.0;
-                                const tiltFactor = Math.pow(normFreq, this.spectralTilt / 3.5);
-                                transformedMag *= tiltFactor;
-                            }
-
-                            this.targetAmp[binIdx] = transformedMag;
-                            this.targetFreq[binIdx] = synthFreq;
-                            activeCount++;
-                        }
-                    }
-
-                    for (let k = 0; k < this.numBins; k++) {
-                        this.stepAmp[k] = (this.targetAmp[k] - this.currentAmp[k]) / this.hopSize;
-                        this.stepFreq[k] = (this.targetFreq[k] - this.currentFreq[k]) / this.hopSize;
-                    }
-
-                    this.port.postMessage({
-                        type: 'frameData',
-                        magnitudes: this.magnitudes,
-                        topIndices: this.binIndices.slice(0, limit),
-                        activeCount: activeCount,
-                        f0: f0,
-                        ratioR: totalPitchRatio
-                    });
-                }
-
-                process(inputs, outputs) {
-                    const input = inputs[0];
-                    const output = outputs[0];
-                    if (!output || output.length === 0) return true;
-
-                    const inputChannel = (input && input.length > 0) ? input[0] : null;
-                    const outputChannel = output[0];
-                    const numSamples = outputChannel.length;
-
-                    const lfoStep = (2.0 * Math.PI * 4.2) / sampleRate;
-
-                    for (let i = 0; i < numSamples; i++) {
-                        const inSample = inputChannel ? inputChannel[i] * this.inputGain : 0.0;
-
-                        this.inputRingBuffer[this.inputWritePos] = inSample;
-                        this.inputWritePos = (this.inputWritePos + 1) % this.fftSize;
-
-                        this.hopCounter++;
-                        if (this.hopCounter >= this.hopSize) {
-                            this.analyzeFrame();
-                            this.hopCounter = 0;
-                        }
-
-                        this.lfoPhase += lfoStep;
-                        if (this.lfoPhase >= 2.0 * Math.PI) this.lfoPhase -= 2.0 * Math.PI;
-
-                        const lfoSin = Math.sin(this.lfoPhase);
-                        const tremoloGainMod = 1.0 + (this.tremoloAmount / 100.0) * 0.35 * lfoSin;
-                        const vibratoFreqMod = 1.0 + (this.tremoloAmount / 100.0) * 0.015 * lfoSin;
-
-                        let synthSample = 0.0;
-                        const invFs = 1.0 / sampleRate;
-
-                        for (let k = 0; k < this.numBins; k++) {
-                            this.currentAmp[k] += this.stepAmp[k];
-                            this.currentFreq[k] += this.stepFreq[k];
-
-                            const amp = this.currentAmp[k] * tremoloGainMod;
-                            if (amp > 1e-7) {
-                                const freq = this.currentFreq[k] * vibratoFreqMod;
-                                const phaseAdv = 2.0 * Math.PI * freq * invFs;
-
-                                this.oscPhase[k] += phaseAdv;
-                                if (this.oscPhase[k] >= 2.0 * Math.PI) {
-                                    this.oscPhase[k] -= 2.0 * Math.PI;
-                                }
-
-                                const phi = this.oscPhase[k];
-                                let oscVal = 0.0;
-
-                                if (this.waveform === 'sine') {
-                                    oscVal = Math.sin(phi);
-                                } else if (this.waveform === 'triangle') {
-                                    oscVal = (Math.abs((phi / Math.PI) - 1.0) * 2.0 - 1.0) * 0.85;
-                                } else if (this.waveform === 'square') {
-                                    oscVal = (Math.sin(phi) >= 0 ? 0.6 : -0.6);
-                                } else if (this.waveform === 'sawtooth') {
-                                    oscVal = (((phi / Math.PI) % 2.0) - 1.0) * 0.6;
-                                }
-
-                                synthSample += amp * oscVal;
-                            }
-                        }
-
-                        const blendedSample = (inSample * (1.0 - this.dryWet) + synthSample * this.dryWet) * this.masterGain;
-                        outputChannel[i] = Math.tanh(blendedSample);
-
-                        if (output.length > 1) {
-                            output[1][i] = outputChannel[i];
-                        }
-                    }
-
-                    return true;
-                }
-            }
-
-            registerProcessor('human-ergonomics-vocoder-processor', HumanErgonomicsVocoderProcessor);
-        `;
-
-        let audioCtx = null;
-        let micStream = null;
-        let micSource = null;
-        let loopSourceNode = null;
-        let vocoderNode = null;
-        let isRunning = false;
-
-        // Recording & Loop State
-        let inputMode = 'mic'; // 'mic' | 'rec'
-        let mediaRecorder = null;
-        let recordedChunks = [];
-        let recordedAudioBuffer = null;
-        let isRecording = false;
-        let isLoopPlaying = false;
-        let recStartTime = 0;
-        let recTimerInterval = null;
-
-        const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-
-        const ERGONOMICS_PRESETS = {
-            male:     { formant: 0.88, pitch: -4, tilt: -0.5, tremolo: 0 },
-            female:   { formant: 1.18, pitch: 4,  tilt: 1.0,  tremolo: 0 },
-            boy:      { formant: 1.35, pitch: 6,  tilt: 1.5,  tremolo: 0 },
-            girl:     { formant: 1.45, pitch: 9,  tilt: 2.0,  tremolo: 0 },
-            oldman:   { formant: 0.82, pitch: -6, tilt: -2.5, tremolo: 35 },
-            oldwoman: { formant: 1.05, pitch: 1,  tilt: -2.0, tremolo: 40 }
-        };
-
-        // DOM Element References
-        const toggleBtn = document.getElementById('toggleAudioBtn');
-        const playIcon = document.getElementById('playIcon');
-        const stopIcon = document.getElementById('stopIcon');
-        const btnText = document.getElementById('btnText');
-        const qualityBadge = document.getElementById('qualityBadge');
-
-        // Recording & Export DOM
-        const srcMicBtn = document.getElementById('srcMicBtn');
-        const srcRecBtn = document.getElementById('srcRecBtn');
-        const recStartBtn = document.getElementById('recStartBtn');
-        const recStopBtn = document.getElementById('recStopBtn');
-        const loopPlayBtn = document.getElementById('loopPlayBtn');
-        const exportWavBtn = document.getElementById('exportWavBtn');
-        const recStatusText = document.getElementById('recStatusText');
-        const recTimeText = document.getElementById('recTimeText');
-
-        // Pitch Monitor DOM
-        const pitchStatusBadge = document.getElementById('pitchStatusBadge');
-        const detectedNoteDisp = document.getElementById('detectedNoteDisp');
-        const targetFreqDisp = document.getElementById('targetFreqDisp');
-        const f0Disp = document.getElementById('f0Disp');
-        const centsDisp = document.getElementById('centsDisp');
-        const centsNeedle = document.getElementById('centsNeedle');
-
-        // Controls DOM
-        const formantScaleSlider = document.getElementById('formantScaleSlider');
-        const formantScaleVal = document.getElementById('formantScaleVal');
-        const pitchShiftSlider = document.getElementById('pitchShiftSlider');
-        const pitchShiftVal = document.getElementById('pitchShiftVal');
-        const spectralTiltSlider = document.getElementById('spectralTiltSlider');
-        const spectralTiltVal = document.getElementById('spectralTiltVal');
-        const tremoloSlider = document.getElementById('tremoloSlider');
-        const tremoloVal = document.getElementById('tremoloVal');
-
-        const waveformSelect = document.getElementById('waveformSelect');
-        const pitchCorrectToggle = document.getElementById('pitchCorrectToggle');
-        const rootKeySelect = document.getElementById('rootKeySelect');
-        const scaleSelect = document.getElementById('scaleSelect');
-        const retuneSpeedSlider = document.getElementById('retuneSpeedSlider');
-        const retuneSpeedVal = document.getElementById('retuneSpeedVal');
-        const correctAmountSlider = document.getElementById('correctAmountSlider');
-        const correctAmountVal = document.getElementById('correctAmountVal');
-
-        const qualitySlider = document.getElementById('qualitySlider');
-        const qualityVal = document.getElementById('qualityVal');
-        const topNSlider = document.getElementById('topNSlider');
-        const topNVal = document.getElementById('topNVal');
-        const threshSlider = document.getElementById('threshSlider');
-        const threshVal = document.getElementById('threshVal');
-        const dryWetSlider = document.getElementById('dryWetSlider');
-        const dryWetVal = document.getElementById('dryWetVal');
-        const masterGainSlider = document.getElementById('masterGainSlider');
-        const masterGainVal = document.getElementById('masterGainVal');
-
-        const activeSinesDisp = document.getElementById('activeSinesDisp');
-        const pitchRatioDisp = document.getElementById('pitchRatioDisp');
-        const meterBar = document.getElementById('meterBar');
-        const peakLevelDb = document.getElementById('peakLevelDb');
-
-        const spectrumCanvas = document.getElementById('spectrumCanvas');
-        const specCtx = spectrumCanvas.getContext('2d');
-        const spectrogramCanvas = document.getElementById('spectrogramCanvas');
-        const gramCtx = spectrogramCanvas.getContext('2d');
-
-        let latestFrameData = null;
-
-        async function initAudio() {
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-                if (audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
-                }
-
-                micStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        autoGainControl: false,
-                        latency: 0
-                    }
-                });
-
-                const blob = new Blob([workletProcessorCode], { type: 'application/javascript' });
-                const workletUrl = URL.createObjectURL(blob);
-                await audioCtx.audioWorklet.addModule(workletUrl);
-                URL.revokeObjectURL(workletUrl);
-
-                micSource = audioCtx.createMediaStreamSource(micStream);
-                vocoderNode = new AudioWorkletNode(audioCtx, 'human-ergonomics-vocoder-processor');
-
-                applyQualitySettings();
-                updateProcessorParams();
-
-                vocoderNode.port.onmessage = (e) => {
-                    if (e.data.type === 'frameData') {
-                        latestFrameData = e.data;
-                    }
-                };
-
-                // Connect initial source mode
-                connectSourceMode();
-
-                vocoderNode.connect(audioCtx.destination);
-
-                isRunning = true;
-                updateUIState();
-                requestAnimationFrame(renderLoop);
-
-            } catch (err) {
-                console.error("Audio Engine Init Failed:", err);
-                alert(`音声処理エンジンの起動に失敗しました:\n${err.message || err}\nマイク許可設定を確認してください。`);
-                stopAudio();
-            }
+        // 骨格低域ブースト & 明瞭度高域強調
+        if (shiftedFreq < 300) amp *= this.resonance;
+        if (shiftedFreq > 2000) amp *= this.clarity;
+
+        // 年代加齢ジッター
+        if (this.age > 0) {
+          shiftedFreq += Math.sin(i + sampleRate) * this.age * 8.0;
         }
 
-        function connectSourceMode() {
-            if (!vocoderNode) return;
-
-            if (micSource) { try { micSource.disconnect(); } catch(e){} }
-            if (loopSourceNode) { try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){} loopSourceNode = null; }
-
-            if (inputMode === 'mic') {
-                if (micSource) micSource.connect(vocoderNode);
-                srcMicBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-cyan-500/20 text-cyan-300 border border-cyan-500 shadow-sm";
-                srcRecBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300";
-            } else if (inputMode === 'rec') {
-                srcMicBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-black text-gray-500 border border-transparent hover:text-gray-300";
-                srcRecBtn.className = "px-3 py-1.5 rounded text-xs font-bold transition-all bg-purple-500/20 text-purple-300 border border-purple-500 shadow-sm";
-
-                if (recordedAudioBuffer && audioCtx) {
-                    startLoopPlayback();
-                }
-            }
-        }
-
-        function startLoopPlayback() {
-            if (!audioCtx || !recordedAudioBuffer || !vocoderNode) return;
-            if (loopSourceNode) {
-                try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){}
-            }
-
-            loopSourceNode = audioCtx.createBufferSource();
-            loopSourceNode.buffer = recordedAudioBuffer;
-            loopSourceNode.loop = true;
-            loopSourceNode.connect(vocoderNode);
-            loopSourceNode.start();
-            isLoopPlaying = true;
-            loopPlayBtn.textContent = "⏸️ ループ一時停止";
-            recStatusText.textContent = "Status: ループ再生中";
-        }
-
-        function stopLoopPlayback() {
-            if (loopSourceNode) {
-                try { loopSourceNode.disconnect(); loopSourceNode.stop(); } catch(e){}
-                loopSourceNode = null;
-            }
-            isLoopPlaying = false;
-            loopPlayBtn.textContent = "▶️ ループ再生";
-            recStatusText.textContent = "Status: ループ停止";
-        }
-
-        function stopAudio() {
-            if (micStream) {
-                micStream.getTracks().forEach(track => track.stop());
-                micStream = null;
-            }
-            if (loopSourceNode) {
-                try { loopSourceNode.stop(); } catch(e){}
-                loopSourceNode = null;
-            }
-            if (audioCtx) {
-                audioCtx.close();
-                audioCtx = null;
-            }
-            isRunning = false;
-            updateUIState();
-        }
-
-        async function startRecording() {
-            if (!audioCtx) {
-                await initAudio();
-            }
-            if (!micStream) return;
-
-            recordedChunks = [];
-            mediaRecorder = new MediaRecorder(micStream);
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) recordedChunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-                const arrayBuffer = await blob.arrayBuffer();
-                recordedAudioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-                recStatusText.textContent = `Status: 録音完了 (${recordedAudioBuffer.duration.toFixed(1)}s)`;
-                loopPlayBtn.disabled = false;
-                exportWavBtn.disabled = false;
-                
-                // Auto switch to Recorded Loop mode for instant playback & parameter tweaking
-                inputMode = 'rec';
-                connectSourceMode();
-            };
-
-            mediaRecorder.start();
-            isRecording = true;
-            recStartBtn.disabled = true;
-            recStopBtn.disabled = false;
-            recStatusText.textContent = "Status: 録音中...";
-
-            recStartTime = Date.now();
-            recTimerInterval = setInterval(() => {
-                const elapsed = (Date.now() - recStartTime) / 1000;
-                recTimeText.textContent = formatTime(elapsed);
-            }, 100);
-        }
-
-        function stopRecording() {
-            if (mediaRecorder && isRecording) {
-                mediaRecorder.stop();
-                isRecording = false;
-                recStartBtn.disabled = false;
-                recStopBtn.disabled = true;
-                clearInterval(recTimerInterval);
-            }
-        }
-
-        function formatTime(sec) {
-            const m = Math.floor(sec / 60);
-            const s = (sec % 60).toFixed(1);
-            return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-        }
-
-        /**
-         * Render Transformed Audio to WAV file using OfflineAudioContext & AudioWorklet
-         * (Respects active Pitch Correction Toggle setting)
-         */
-        async function exportProcessedWav() {
-            if (!recordedAudioBuffer) {
-                alert("録音データが存在しません。先に録音を行ってください。");
-                return;
-            }
-
-            exportWavBtn.disabled = true;
-            exportWavBtn.textContent = "⏳ レンダリング中...";
-
-            try {
-                const sampleRate = recordedAudioBuffer.sampleRate;
-                const length = recordedAudioBuffer.length;
-                const offlineCtx = new OfflineAudioContext(1, length, sampleRate);
-
-                // Add AudioWorklet module to offline context
-                const blob = new Blob([workletProcessorCode], { type: 'application/javascript' });
-                const workletUrl = URL.createObjectURL(blob);
-                await offlineCtx.audioWorklet.addModule(workletUrl);
-                URL.revokeObjectURL(workletUrl);
-
-                const offlineSource = offlineCtx.createBufferSource();
-                offlineSource.buffer = recordedAudioBuffer;
-
-                const offlineVocoder = new AudioWorkletNode(offlineCtx, 'human-ergonomics-vocoder-processor');
-
-                // Determine FFT settings based on quality slider
-                const q = parseFloat(qualitySlider.value);
-                let fftSize = 2048, hopSize = 512;
-                if (q === 0.5) { fftSize = 1024; hopSize = 512; }
-                else if (q === 1.0) { fftSize = 2048; hopSize = 512; }
-                else if (q === 1.5) { fftSize = 4096; hopSize = 512; }
-                else if (q === 2.0) { fftSize = 4096; hopSize = 256; }
-
-                offlineVocoder.port.postMessage({
-                    type: 'reconfig',
-                    fftSize: fftSize,
-                    hopSize: hopSize
-                });
-
-                // Pass EXACT current parameters (CRITICAL: Respect pitchCorrectToggle)
-                offlineVocoder.port.postMessage({
-                    maxTopN: parseInt(topNSlider.value, 10),
-                    dryWet: parseFloat(dryWetSlider.value),
-                    threshold: parseFloat(threshSlider.value),
-                    masterGain: parseFloat(masterGainSlider.value),
-                    waveform: waveformSelect.value,
-
-                    formantScale: parseFloat(formantScaleSlider.value),
-                    pitchShiftSemitones: parseInt(pitchShiftSlider.value, 10),
-                    spectralTilt: parseFloat(spectralTiltSlider.value),
-                    tremoloAmount: parseFloat(tremoloSlider.value),
-
-                    pitchCorrectEnabled: pitchCorrectToggle.checked, // Respect user toggle!
-                    rootKey: parseInt(rootKeySelect.value, 10),
-                    selectedScale: scaleSelect.value,
-                    retuneSpeed: parseFloat(retuneSpeedSlider.value),
-                    correctAmount: parseFloat(correctAmountSlider.value)
-                });
-
-                offlineSource.connect(offlineVocoder);
-                offlineVocoder.connect(offlineCtx.destination);
-
-                offlineSource.start(0);
-
-                const renderedBuffer = await offlineCtx.startRendering();
-                const wavBlob = encodeWAV(renderedBuffer.getChannelData(0), sampleRate);
-
-                // Auto Trigger Download
-                const url = URL.createObjectURL(wavBlob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `transformed_voice_${Date.now()}.wav`;
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(() => {
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                }, 100);
-
-            } catch (err) {
-                console.error("WAV Export Failed:", err);
-                alert("WAVファイルの生成に失敗しました: " + err.message);
-            } finally {
-                exportWavBtn.disabled = false;
-                exportWavBtn.textContent = "💾 WAV書き出し";
-            }
-        }
-
-        /**
-         * 16-bit PCM WAV File Encoder
-         */
-        function encodeWAV(samples, sampleRate) {
-            const buffer = new ArrayBuffer(44 + samples.length * 2);
-            const view = new DataView(buffer);
-
-            const writeString = (v, offset, str) => {
-                for (let i = 0; i < str.length; i++) {
-                    v.setUint8(offset + i, str.charCodeAt(i));
-                }
-            };
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + samples.length * 2, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true); // Subchunk1Size
-            view.setUint16(20, 1, true);  // PCM
-            view.setUint16(22, 1, true);  // Mono
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, sampleRate * 2, true); // ByteRate
-            view.setUint16(32, 2, true);  // BlockAlign
-            view.setUint16(34, 16, true); // BitsPerSample
-            writeString(view, 36, 'data');
-            view.setUint32(40, samples.length * 2, true);
-
-            let offset = 44;
-            for (let i = 0; i < samples.length; i++, offset += 2) {
-                let s = Math.max(-1, Math.min(1, samples[i]));
-                view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-            }
-
-            return new Blob([view], { type: 'audio/wav' });
-        }
-
-        function updateUIState() {
-            if (isRunning) {
-                playIcon.classList.add('hidden');
-                stopIcon.classList.remove('hidden');
-                btnText.textContent = "STOP DSP ENGINE";
-                toggleBtn.classList.remove('from-purple-500', 'via-cyan-500', 'to-blue-600');
-                toggleBtn.classList.add('from-rose-600', 'to-red-600', 'shadow-rose-500/30');
-            } else {
-                playIcon.classList.remove('hidden');
-                stopIcon.classList.add('hidden');
-                btnText.textContent = "START DSP ENGINE";
-                toggleBtn.classList.remove('from-rose-600', 'to-red-600', 'shadow-rose-500/30');
-                toggleBtn.classList.add('from-purple-500', 'via-cyan-500', 'to-blue-600', 'shadow-purple-500/30');
-                activeSinesDisp.textContent = "0 / 512";
-                pitchRatioDisp.textContent = "1.000x";
-                detectedNoteDisp.textContent = "--";
-                targetFreqDisp.textContent = "-- Hz Target";
-                f0Disp.textContent = "-- Hz";
-                centsDisp.textContent = "0.0 cents";
-                centsNeedle.style.left = "50%";
-                meterBar.style.width = "0%";
-                peakLevelDb.textContent = "-inf dB";
-            }
-        }
-
-        function applyQualitySettings() {
-            const q = parseFloat(qualitySlider.value);
-            let fftSize = 2048;
-            let hopSize = 512;
-
-            if (q === 0.5) {
-                fftSize = 1024; hopSize = 512;
-                qualityVal.textContent = "0.5x (Fast)";
-                qualityBadge.textContent = "QUALITY 0.5x (FFT 1024)";
-            } else if (q === 1.0) {
-                fftSize = 2048; hopSize = 512;
-                qualityVal.textContent = "1.0x (Standard)";
-                qualityBadge.textContent = "QUALITY 1.0x (FFT 2048)";
-            } else if (q === 1.5) {
-                fftSize = 4096; hopSize = 512;
-                qualityVal.textContent = "1.5x (High)";
-                qualityBadge.textContent = "QUALITY 1.5x (FFT 4096)";
-            } else if (q === 2.0) {
-                fftSize = 4096; hopSize = 256;
-                qualityVal.textContent = "2.0x (Ultra High)";
-                qualityBadge.textContent = "QUALITY 2.0x (FFT 4096 / Hop 256)";
-            }
-
-            if (vocoderNode) {
-                vocoderNode.port.postMessage({
-                    type: 'reconfig',
-                    fftSize: fftSize,
-                    hopSize: hopSize
-                });
-            }
-        }
-
-        function updateProcessorParams() {
-            if (!vocoderNode) return;
-
-            vocoderNode.port.postMessage({
-                maxTopN: parseInt(topNSlider.value, 10),
-                dryWet: parseFloat(dryWetSlider.value),
-                threshold: parseFloat(threshSlider.value),
-                masterGain: parseFloat(masterGainSlider.value),
-                waveform: waveformSelect.value,
-
-                formantScale: parseFloat(formantScaleSlider.value),
-                pitchShiftSemitones: parseInt(pitchShiftSlider.value, 10),
-                spectralTilt: parseFloat(spectralTiltSlider.value),
-                tremoloAmount: parseFloat(tremoloSlider.value),
-
-                pitchCorrectEnabled: pitchCorrectToggle.checked,
-                rootKey: parseInt(rootKeySelect.value, 10),
-                selectedScale: scaleSelect.value,
-                retuneSpeed: parseFloat(retuneSpeedSlider.value),
-                correctAmount: parseFloat(correctAmountSlider.value)
-            });
-
-            if (pitchCorrectToggle.checked) {
-                const rootName = NOTE_NAMES[parseInt(rootKeySelect.value, 10)];
-                const isHard = parseFloat(retuneSpeedSlider.value) >= 0.9;
-                pitchStatusBadge.textContent = `${isHard ? 'HARD AUTO-TUNE' : 'AUTO-TUNE'} ON (${rootName} ${scaleSelect.value.toUpperCase()})`;
-                pitchStatusBadge.className = isHard 
-                    ? "text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 font-bold glow-rose"
-                    : "text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold";
-            } else {
-                pitchStatusBadge.textContent = "AUTO-TUNE OFF (RAW VOCODER)";
-                pitchStatusBadge.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
-            }
-        }
-
-        function applyPreset(key) {
-            const p = ERGONOMICS_PRESETS[key];
-            if (!p) return;
-
-            formantScaleSlider.value = p.formant;
-            formantScaleVal.textContent = `${p.formant.toFixed(2)}x`;
-
-            pitchShiftSlider.value = p.pitch;
-            pitchShiftVal.textContent = `${p.pitch > 0 ? '+' : ''}${p.pitch} Semitones`;
-
-            spectralTiltSlider.value = p.tilt;
-            spectralTiltVal.textContent = `${p.tilt > 0 ? '+' : ''}${p.tilt.toFixed(1)}`;
-
-            tremoloSlider.value = p.tremolo;
-            tremoloVal.textContent = `${p.tremolo}%`;
-
-            document.querySelectorAll('.preset-btn').forEach(btn => {
-                if (btn.dataset.preset === key) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-
-            updateProcessorParams();
-        }
-
-        function resizeCanvases() {
-            const specRect = spectrumCanvas.parentElement.getBoundingClientRect();
-            spectrumCanvas.width = specRect.width;
-            spectrumCanvas.height = specRect.height;
-
-            const gramRect = spectrogramCanvas.parentElement.getBoundingClientRect();
-            spectrogramCanvas.width = gramRect.width;
-            spectrogramCanvas.height = gramRect.height;
-        }
-        window.addEventListener('resize', resizeCanvases);
-        resizeCanvases();
-
-        // Real-time Canvas Rendering Animation Loop
-        function renderLoop() {
-            if (!isRunning) return;
-
-            if (latestFrameData) {
-                const mags = latestFrameData.magnitudes;
-                const topIndices = latestFrameData.topIndices;
-                const activeCount = latestFrameData.activeCount;
-                const f0 = latestFrameData.f0;
-                const ratioR = latestFrameData.ratioR;
-
-                activeSinesDisp.textContent = `${activeCount} / ${topNSlider.value}`;
-                pitchRatioDisp.textContent = `${ratioR.toFixed(3)}x`;
-
-                // Pitch HUD Updates
-                if (f0 > 0) {
-                    f0Disp.textContent = `${f0.toFixed(1)} Hz`;
-
-                    const exactMIDI = 12 * Math.log2(f0 / 440) + 69;
-                    const targetMIDI = Math.round(exactMIDI);
-                    const noteIdx = ((targetMIDI % 12) + 12) % 12;
-                    const octave = Math.floor(targetMIDI / 12) - 1;
-                    const targetFreq = 440 * Math.pow(2, (targetMIDI - 69) / 12);
-
-                    const centsError = (exactMIDI - targetMIDI) * 100;
-
-                    detectedNoteDisp.textContent = `${NOTE_NAMES[noteIdx]}${octave}`;
-                    targetFreqDisp.textContent = `${targetFreq.toFixed(1)} Hz Target`;
-                    centsDisp.textContent = `${centsError > 0 ? '+' : ''}${centsError.toFixed(1)} cents`;
-
-                    const needlePct = Math.min(100, Math.max(0, 50 + centsError));
-                    centsNeedle.style.left = `${needlePct}%`;
-                } else {
-                    f0Disp.textContent = "NO VOICE";
-                    centsDisp.textContent = "0.0 cents";
-                    centsNeedle.style.left = "50%";
-                }
-
-                // Spectrum Canvas Rendering
-                const sw = spectrumCanvas.width;
-                const sh = spectrumCanvas.height;
-                specCtx.fillStyle = 'rgba(5, 7, 12, 0.4)';
-                specCtx.fillRect(0, 0, sw, sh);
-
-                const activeMap = new Uint8Array(mags.length);
-                for (let i = 0; i < topIndices.length; i++) {
-                    activeMap[topIndices[i]] = 1;
-                }
-
-                const numBins = mags.length;
-                let maxPeak = 0;
-
-                specCtx.beginPath();
-                specCtx.strokeStyle = 'rgba(168, 85, 247, 0.25)';
-                specCtx.lineWidth = 1;
-
-                for (let i = 0; i < numBins; i++) {
-                    const x = (i / numBins) * sw;
-                    const val = mags[i];
-                    if (val > maxPeak) maxPeak = val;
-
-                    const normH = Math.min(sh, (Math.log10(val * 1000 + 1) / 3) * sh);
-                    const y = sh - normH;
-
-                    if (i === 0) specCtx.moveTo(x, y);
-                    else specCtx.lineTo(x, y);
-                }
-                specCtx.stroke();
-
-                for (let i = 0; i < topIndices.length; i++) {
-                    const binIdx = topIndices[i];
-                    const val = mags[binIdx];
-                    if (val < parseFloat(threshSlider.value)) continue;
-
-                    const shiftedBinIdx = binIdx * ratioR;
-                    const x = (shiftedBinIdx / numBins) * sw;
-                    const normH = Math.min(sh, (Math.log10(val * 1000 + 1) / 3) * sh);
-                    const y = sh - normH;
-
-                    specCtx.beginPath();
-                    specCtx.strokeStyle = parseFloat(retuneSpeedSlider.value) >= 0.9 ? '#f43f5e' : '#06b6d4';
-                    specCtx.lineWidth = 2;
-                    specCtx.moveTo(x, sh);
-                    specCtx.lineTo(x, y);
-                    specCtx.stroke();
-
-                    specCtx.beginPath();
-                    specCtx.fillStyle = '#a855f7';
-                    specCtx.arc(x, y, 2.5, 0, Math.PI * 2);
-                    specCtx.fill();
-                }
-
-                // Level Meter
-                const db = 20 * Math.log10(maxPeak + 1e-6);
-                const meterPct = Math.min(100, Math.max(0, ((db + 60) / 60) * 100));
-                meterBar.style.width = `${meterPct}%`;
-                peakLevelDb.textContent = isFinite(db) ? `${db.toFixed(1)} dB` : '-inf dB';
-
-                // Spectrogram Waterfall Canvas Rendering
-                const gw = spectrogramCanvas.width;
-                const gh = spectrogramCanvas.height;
-
-                const imgData = gramCtx.getImageData(1, 0, gw - 1, gh);
-                gramCtx.putImageData(imgData, 0, 0);
-
-                const colImg = gramCtx.createImageData(1, gh);
-                for (let y = 0; y < gh; y++) {
-                    const binIdx = Math.floor(((gh - y) / gh) * numBins);
-                    const isTop = activeMap[binIdx];
-                    const mag = mags[binIdx];
-
-                    let r = 0, g = 0, b = 0;
-                    if (isTop && mag >= parseFloat(threshSlider.value)) {
-                        const intensity = Math.min(1.0, mag * 35);
-                        r = Math.floor(intensity * 244);
-                        g = Math.floor((1.0 - intensity) * 120 + 30);
-                        b = 247;
-                    } else {
-                        const intensity = Math.min(1.0, mag * 3);
-                        r = Math.floor(intensity * 30);
-                        g = Math.floor(intensity * 10);
-                        b = Math.floor(intensity * 50);
-                    }
-
-                    const pixelIdx = y * 4;
-                    colImg.data[pixelIdx + 0] = r;
-                    colImg.data[pixelIdx + 1] = g;
-                    colImg.data[pixelIdx + 2] = b;
-                    colImg.data[pixelIdx + 3] = 255;
-                }
-                gramCtx.putImageData(colImg, gw - 1, 0);
-            }
-
-            requestAnimationFrame(renderLoop);
-        }
-
-        // Event Listener Bindings
-        toggleBtn.addEventListener('click', () => {
-            if (isRunning) stopAudio();
-            else initAudio();
-        });
-
-        srcMicBtn.addEventListener('click', () => {
-            inputMode = 'mic';
-            connectSourceMode();
-        });
-
-        srcRecBtn.addEventListener('click', () => {
-            if (!recordedAudioBuffer) {
-                alert("まず「録音開始」ボタンを押してマイク音声の録音を行ってください。");
-                return;
-            }
-            inputMode = 'rec';
-            connectSourceMode();
-        });
-
-        recStartBtn.addEventListener('click', startRecording);
-        recStopBtn.addEventListener('click', stopRecording);
-
-        loopPlayBtn.addEventListener('click', () => {
-            if (isLoopPlaying) {
-                stopLoopPlayback();
-            } else {
-                inputMode = 'rec';
-                connectSourceMode();
-            }
-        });
-
-        exportWavBtn.addEventListener('click', exportProcessedWav);
-
-        document.querySelectorAll('.preset-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                applyPreset(e.currentTarget.dataset.preset);
-            });
-        });
-
-        formantScaleSlider.addEventListener('input', (e) => {
-            formantScaleVal.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            updateProcessorParams();
-        });
-
-        pitchShiftSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value, 10);
-            pitchShiftVal.textContent = `${val > 0 ? '+' : ''}${val} Semitones`;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            updateProcessorParams();
-        });
-
-        spectralTiltSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            spectralTiltVal.textContent = `${val > 0 ? '+' : ''}${val.toFixed(1)}`;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            updateProcessorParams();
-        });
-
-        tremoloSlider.addEventListener('input', (e) => {
-            tremoloVal.textContent = `${e.target.value}%`;
-            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
-            updateProcessorParams();
-        });
-
-        waveformSelect.addEventListener('change', updateProcessorParams);
-        pitchCorrectToggle.addEventListener('change', updateProcessorParams);
-        rootKeySelect.addEventListener('change', updateProcessorParams);
-        scaleSelect.addEventListener('change', updateProcessorParams);
-
-        retuneSpeedSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            if (val >= 0.99) retuneSpeedVal.textContent = "100% (Instant Snap)";
-            else if (val === 0) retuneSpeedVal.textContent = "0% (Smooth Natural)";
-            else retuneSpeedVal.textContent = `${Math.round(val * 100)}%`;
-            updateProcessorParams();
-        });
-
-        correctAmountSlider.addEventListener('input', (e) => {
-            correctAmountVal.textContent = `${Math.round(parseFloat(e.target.value) * 100)}%`;
-            updateProcessorParams();
-        });
-
-        qualitySlider.addEventListener('input', () => {
-            applyQualitySettings();
-            updateProcessorParams();
-        });
-
-        topNSlider.addEventListener('input', (e) => {
-            topNVal.textContent = `${e.target.value} Waves`;
-            updateProcessorParams();
-        });
-
-        threshSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            threshVal.textContent = val.toFixed(6);
-            updateProcessorParams();
-        });
-
-        dryWetSlider.addEventListener('input', (e) => {
-            dryWetVal.textContent = `${Math.round(parseFloat(e.target.value) * 100)}%`;
-            updateProcessorParams();
-        });
-
-        masterGainSlider.addEventListener('input', (e) => {
-            masterGainVal.textContent = `${parseFloat(e.target.value).toFixed(2)}x`;
-            updateProcessorParams();
-        });
-    </script>
+        this.oscillators[i].targetFreq = shiftedFreq;
+        this.oscillators[i].targetAmp = amp;
+      } else {
+        this.oscillators[i].targetAmp = 0;
+      }
+    }
+
+    // SMS: 未使用の非周期成分（ノイズ残差）を16帯域に集約
+    for (let k = 1; k < numBins; k++) {
+      const bandIdx = Math.floor((k / numBins) * 16);
+      const mag = magnitudes[k];
+      noiseResidualBins[bandIdx] += mag;
+    }
+
+    for (let b = 0; b < 16; b++) {
+      this.targetNoiseBands[b] = (noiseResidualBins[b] / (numBins / 16)) * 0.01;
+    }
+
+    // スペクトログラム描画用データ送信
+    if (Math.random() < 0.3) {
+      this.port.postMessage({ type: 'spectrogram', mags: magnitudes.slice(0, 128) });
+    }
+  }
+
+  snapToScale(freq, rootKey, scaleType) {
+    const midi = 69 + 12 * Math.log2(freq / 440);
+    const roundedMidi = Math.round(midi);
+    const noteInOctave = (roundedMidi - rootKey + 120) % 12;
+
+    const scales = {
+      chromatic: [0,1,2,3,4,5,6,7,8,9,10,11],
+      major: [0,2,4,5,7,9,11],
+      minor: [0,2,3,5,7,8,10],
+      pentatonic: [0,2,4,7,9]
+    };
+
+    const allowedNotes = scales[scaleType] || scales.chromatic;
+    let minDiff = Infinity;
+    let bestNote = noteInOctave;
+
+    for (let note of allowedNotes) {
+      let diff = Math.abs(noteInOctave - note);
+      if (diff > 6) diff = 12 - diff;
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestNote = note;
+      }
+    }
+
+    const correctedMidi = roundedMidi + (bestNote - noteInOctave);
+    return 440 * Math.pow(2, (correctedMidi - 69) / 12);
+  }
+}
+
+registerProcessor('hq-voice-processor', HQVoiceProcessor);
+`;
+
+// アプリケーション UI と Web Audio 統合スクリプト
+let audioCtx = null;
+let workletNode = null;
+let micStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordedAudioBuffer = null;
+let loopSourceNode = null;
+let isRecording = false;
+let isLooping = false;
+let recStartTime = 0;
+let recTimerInterval = null;
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+// プリセット定義
+const PRESETS = {
+  male: { formant: 0.85, pitch: 0.80, thickness: 1.25, resonance: 1.30, age: 0.0, clarity: 0.9 },
+  female: { formant: 1.20, pitch: 1.25, thickness: 0.85, resonance: 0.85, age: 0.0, clarity: 1.1 },
+  boy: { formant: 1.15, pitch: 1.35, thickness: 0.90, resonance: 0.90, age: 0.0, clarity: 1.2 },
+  girl: { formant: 1.30, pitch: 1.45, thickness: 0.80, resonance: 0.80, age: 0.0, clarity: 1.25 },
+  grandpa: { formant: 0.82, pitch: 0.75, thickness: 1.35, resonance: 1.40, age: 0.35, clarity: 0.75 },
+  grandma: { formant: 1.10, pitch: 1.15, thickness: 1.10, resonance: 1.10, age: 0.40, clarity: 0.80 }
+};
+
+async function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 44100 });
+
+  const blob = new Blob([workletCode], { type: 'application/javascript' });
+  const url = URL.createObjectURL(blob);
+  await audioCtx.audioWorklet.addModule(url);
+
+  workletNode = new AudioWorkletNode(audioCtx, 'hq-voice-processor');
+  workletNode.connect(audioCtx.destination);
+
+  workletNode.port.onmessage = (e) => {
+    const data = e.data;
+    if (data.type === 'hud') updateHUD(data.f0, data.targetFreq);
+    if (data.type === 'spectrogram') drawSpectrogram(data.mags);
+  };
+
+  syncAllParameters();
+}
+
+// UI要素の取得とイベントリスナー設定
+document.addEventListener('DOMContentLoaded', () => {
+  const btnStart = document.getElementById('btnStart');
+  const btnRecord = document.getElementById('btnRecord');
+  const btnPlayLoop = document.getElementById('btnPlayLoop');
+  const btnExport = document.getElementById('btnExport');
+
+  btnStart.addEventListener('click', async () => {
+    await initAudio();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false } });
+      const micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource.connect(workletNode);
+
+      btnStart.disabled = true;
+      btnStart.textContent = "🎙️ マイク稼働中";
+      btnRecord.disabled = false;
+    } catch (err) {
+      alert("マイクアクセスの許可が必要です: " + err.message);
+    }
+  });
+
+  // 録音機能
+  btnRecord.addEventListener('click', () => {
+    if (!isRecording) {
+      recordedChunks = [];
+      const dest = audioCtx.createMediaStreamDestination();
+      const micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource.connect(dest);
+
+      mediaRecorder = new MediaRecorder(dest.stream);
+      mediaRecorder.ondataavailable = (e) => recordedChunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const arrayBuf = await blob.arrayBuffer();
+        recordedAudioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+        btnPlayLoop.disabled = false;
+        btnExport.disabled = false;
+      };
+
+      mediaRecorder.start();
+      isRecording = true;
+      btnRecord.textContent = "⏹️ 録音停止";
+      document.getElementById('recStatusDisplay').style.display = 'flex';
+      recStartTime = Date.now();
+      recTimerInterval = setInterval(updateRecTimer, 1000);
+    } else {
+      mediaRecorder.stop();
+      isRecording = false;
+      btnRecord.textContent = "🔴 録音開始";
+      document.getElementById('recStatusDisplay').style.display = 'none';
+      clearInterval(recTimerInterval);
+    }
+  });
+
+  // ループ再生機能
+  btnPlayLoop.addEventListener('click', () => {
+    if (!recordedAudioBuffer) return;
+    if (!isLooping) {
+      loopSourceNode = audioCtx.createBufferSource();
+      loopSourceNode.buffer = recordedAudioBuffer;
+      loopSourceNode.loop = true;
+      loopSourceNode.connect(workletNode);
+      loopSourceNode.start();
+
+      isLooping = true;
+      btnPlayLoop.textContent = "⏸️ ループ停止";
+      btnPlayLoop.classList.replace('btn-accent', 'btn-danger');
+    } else {
+      if (loopSourceNode) loopSourceNode.stop();
+      isLooping = false;
+      btnPlayLoop.textContent = "🔄 ループ再生";
+      btnPlayLoop.classList.replace('btn-danger', 'btn-accent');
+    }
+  });
+
+  // WAV書き出し
+  btnExport.addEventListener('click', async () => {
+    if (!recordedAudioBuffer) return;
+    btnExport.disabled = true;
+    btnExport.textContent = "⏳ 書き出し中...";
+
+    const offlineCtx = new OfflineAudioContext(1, recordedAudioBuffer.length, recordedAudioBuffer.sampleRate);
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    await offlineCtx.audioWorklet.addModule(url);
+
+    const offlineWorklet = new AudioWorkletNode(offlineCtx, 'hq-voice-processor');
+    const source = offlineCtx.createBufferSource();
+    source.buffer = recordedAudioBuffer;
+
+    // パラメータをオフラインノードに転送
+    syncNodeParameters(offlineWorklet);
+
+    source.connect(offlineWorklet);
+    offlineWorklet.connect(offlineCtx.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    const wavBlob = bufferToWav(renderedBuffer);
+
+    const downloadUrl = URL.createObjectURL(wavBlob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = `transformed_voice_${Date.now()}.wav`;
+    a.click();
+
+    btnExport.disabled = false;
+    btnExport.textContent = "💾 WAV保存";
+  });
+
+  setupParamListeners();
+});
+
+function setupParamListeners() {
+  const bindSlider = (id, paramKey, displayId, formatFn) => {
+    const slider = document.getElementById(id);
+    slider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      if (displayId) document.getElementById(displayId).textContent = formatFn ? formatFn(val) : val;
+      if (workletNode) workletNode.port.postMessage({ type: 'param', key: paramKey, value: val });
+    });
+  };
+
+  bindSlider('paramFormant', 'formantScale', 'valFormant', v => v.toFixed(2) + 'x');
+  bindSlider('paramPitchShift', 'pitchShift', 'valPitchShift', v => v.toFixed(2) + 'x');
+  bindSlider('paramThickness', 'thickness', 'valThickness', v => v.toFixed(2) + 'x');
+  bindSlider('paramResonance', 'resonance', 'valResonance', v => v.toFixed(2) + 'x');
+  bindSlider('paramAge', 'age', 'valAge', v => v.toFixed(2));
+  bindSlider('paramClarity', 'clarity', 'valClarity', v => v.toFixed(2) + 'x');
+
+  bindSlider('paramRetuneSpeed', 'retuneSpeed', 'valRetuneSpeed', v => Math.round(v * 100) + '%');
+  bindSlider('paramCorrectionAmount', 'correctionAmount', 'valCorrectionAmount', v => Math.round(v * 100) + '%');
+
+  bindSlider('paramNoiseBlend', 'noiseBlend', 'valNoiseBlend', v => v.toFixed(2));
+  bindSlider('paramSineCount', 'sineCount', 'valSineCount', v => v + '本');
+  bindSlider('paramNoiseThresh', 'noiseThreshold', 'valNoiseThresh', v => v.toFixed(6));
+  bindSlider('paramQuality', 'qualityFactor', 'valQuality', v => v.toFixed(1) + 'x');
+
+  document.getElementById('paramRootKey').addEventListener('change', (e) => {
+    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'rootKey', value: parseInt(e.target.value) });
+  });
+
+  document.getElementById('paramScale').addEventListener('change', (e) => {
+    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'scaleType', value: e.target.value });
+  });
+
+  document.getElementById('paramWaveform').addEventListener('change', (e) => {
+    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'waveformType', value: e.target.value });
+  });
+
+  document.getElementById('paramPitchCorrectToggle').addEventListener('change', (e) => {
+    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'pitchCorrect', value: e.target.checked });
+  });
+
+  document.getElementById('paramPhaseLock').addEventListener('change', (e) => {
+    if (workletNode) workletNode.port.postMessage({ type: 'param', key: 'usePhaseLock', value: e.target.checked });
+  });
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  setSliderValue('paramFormant', 'valFormant', p.formant, v => v.toFixed(2) + 'x', 'formantScale');
+  setSliderValue('paramPitchShift', 'valPitchShift', p.pitch, v => v.toFixed(2) + 'x', 'pitchShift');
+  setSliderValue('paramThickness', 'valThickness', p.thickness, v => v.toFixed(2) + 'x', 'thickness');
+  setSliderValue('paramResonance', 'valResonance', p.resonance, v => v.toFixed(2) + 'x', 'resonance');
+  setSliderValue('paramAge', 'valAge', p.age, v => v.toFixed(2), 'age');
+  setSliderValue('paramClarity', 'valClarity', p.clarity, v => v.toFixed(2) + 'x', 'clarity');
+}
+
+function setSliderValue(id, displayId, value, formatFn, paramKey) {
+  const el = document.getElementById(id);
+  el.value = value;
+  document.getElementById(displayId).textContent = formatFn(value);
+  if (workletNode) workletNode.port.postMessage({ type: 'param', key: paramKey, value: value });
+}
+
+function syncAllParameters() {
+  if (!workletNode) return;
+  syncNodeParameters(workletNode);
+}
+
+function syncNodeParameters(node) {
+  const send = (k, v) => node.port.postMessage({ type: 'param', key: k, value: v });
+  send('formantScale', parseFloat(document.getElementById('paramFormant').value));
+  send('pitchShift', parseFloat(document.getElementById('paramPitchShift').value));
+  send('thickness', parseFloat(document.getElementById('paramThickness').value));
+  send('resonance', parseFloat(document.getElementById('paramResonance').value));
+  send('age', parseFloat(document.getElementById('paramAge').value));
+  send('clarity', parseFloat(document.getElementById('paramClarity').value));
+  send('pitchCorrect', document.getElementById('paramPitchCorrectToggle').checked);
+  send('rootKey', parseInt(document.getElementById('paramRootKey').value));
+  send('scaleType', document.getElementById('paramScale').value);
+  send('retuneSpeed', parseFloat(document.getElementById('paramRetuneSpeed').value));
+  send('correctionAmount', parseFloat(document.getElementById('paramCorrectionAmount').value));
+  send('noiseBlend', parseFloat(document.getElementById('paramNoiseBlend').value));
+  send('sineCount', parseInt(document.getElementById('paramSineCount').value));
+  send('waveformType', document.getElementById('paramWaveform').value);
+  send('noiseThreshold', parseFloat(document.getElementById('paramNoiseThresh').value));
+  send('qualityFactor', parseFloat(document.getElementById('paramQuality').value));
+  send('usePhaseLock', document.getElementById('paramPhaseLock').checked);
+}
+
+function updateHUD(f0, targetFreq) {
+  if (f0 < 60) {
+    document.getElementById('hudNote').textContent = "--";
+    document.getElementById('hudFreq').textContent = "0.0 Hz";
+    document.getElementById('hudPointer').style.left = "50%";
+    return;
+  }
+
+  const midi = 69 + 12 * Math.log2(f0 / 440);
+  const noteIdx = Math.round(midi) % 12;
+  const noteName = NOTE_NAMES[(noteIdx + 12) % 12];
+  const octave = Math.floor(Math.round(midi) / 12) - 1;
+
+  const cents = (midi - Math.round(midi)) * 100;
+  const pointerPos = Math.max(0, Math.min(100, 50 + cents));
+
+  document.getElementById('hudNote').textContent = `${noteName}${octave}`;
+  document.getElementById('hudFreq').textContent = `${f0.toFixed(1)} Hz`;
+  document.getElementById('hudPointer').style.left = `${pointerPos}%`;
+}
+
+function updateRecTimer() {
+  const elapsed = Math.floor((Date.now() - recStartTime) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('recTimer').textContent = `${m}:${s}`;
+}
+
+// スペクトログラム描画
+const canvas = document.getElementById('canvasSpectrogram');
+const ctx = canvas.getContext('2d');
+
+function drawSpectrogram(mags) {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const barWidth = canvas.width / mags.length;
+  for (let i = 0; i < mags.length; i++) {
+    const h = (mags[i] / 50) * canvas.height;
+    const hue = (i / mags.length) * 280;
+    ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+    ctx.fillRect(i * barWidth, canvas.height - h, barWidth - 1, h);
+  }
+}
+
+// WAVエンコーダー
+function bufferToWav(buffer) {
+  const numOfChan = buffer.numberOfChannels;
+  const length = buffer.length * numOfChan * 2 + 44;
+  const out = new DataView(new ArrayBuffer(length));
+  let channels = [], sample, offset = 0, pos = 0;
+
+  function setUint16(data) { out.setUint16(pos, data, true); pos += 2; }
+  function setUint32(data) { out.setUint32(pos, data, true); pos += 4; }
+
+  setUint32(0x46464952); // "RIFF"
+  setUint32(length - 8);
+  setUint32(0x45564157); // "WAVE"
+  setUint32(0x20746d66); // "fmt "
+  setUint32(16);
+  setUint16(1);
+  setUint16(numOfChan);
+  setUint32(buffer.sampleRate);
+  setUint32(buffer.sampleRate * 2 * numOfChan);
+  setUint16(numOfChan * 2);
+  setUint16(16);
+  setUint32(0x61746164); // "data"
+  setUint32(length - pos - 4);
+
+  for (let i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
+
+  while (offset < buffer.length) {
+    for (let i = 0; i < numOfChan; i++) {
+      sample = Math.max(-1, Math.min(1, channels[i][offset]));
+      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+      out.setInt16(pos, sample, true);
+      pos += 2;
+    }
+    offset++;
+  }
+  return new Blob([out], { type: 'audio/wav' });
+}
+</script>
 </body>
 </html>
