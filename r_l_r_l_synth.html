@@ -7,7 +7,7 @@
   <!-- ======================================================= -->
   <!-- 🎵 Web Synth ポータル用メタデータ (ここを追加してください) -->
   <!-- ======================================================= -->
-  <meta name="synth-title" content="ローグライクRPGライクSynth">
+  <meta name="synth-title" content="ローグライクRPGライクトラックメイカー">
   <meta name="synth-description" content="ローグライクに唯一無二の旅路を奏でます。最高のデッキを構築して最高の楽曲を作りましょう！">
   <meta name="synth-tags" content="Algorithm, Trackmake, Pixel art">
   <meta name="synth-color" content="cyan"> <!-- 選択肢: pink, cyan, gold, purple, emerald -->
@@ -16,7 +16,7 @@
   <meta name="synth-number" content="#02"> <!-- ナンバリング（省略可） -->
   <!-- ======================================================= -->
   
-    <title>ROGUE-LIKE RPG-LIKE SYNTH</title>
+    <title>ROGUE-LIKE RPG-LIKE Track-Maker</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -164,7 +164,7 @@
         <section class="flex-1 flex flex-col bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl relative">
             <div class="absolute top-2 left-2 z-10 bg-slate-950/80 backdrop-blur px-2.5 py-0.5 rounded-full text-[11px] text-slate-300 border border-slate-800 flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>ダンジョンマップ</span>
+                <span>Lv1:フリムカズの洞窟</span>
             </div>
 
             <!-- Active Bonuses Badges Container -->
@@ -298,7 +298,7 @@
 
                 <div class="space-y-1">
                     <div class="flex justify-between text-xs font-bold">
-                        <span class="text-slate-300">ダンジョン長さ (小節数)</span>
+                        <span class="text-slate-300">ダンジョンの長さ (小節数)</span>
                         <span id="start-bars-disp" class="text-amber-400 font-mono">96 小節</span>
                     </div>
                     <input id="start-bars-input" type="range" min="10" max="201" value="96" step="1" oninput="updateStartBars(this.value)" class="w-full accent-amber-400 cursor-pointer">
@@ -410,30 +410,30 @@
         };
 
         const CHORD_CARDS = [
-            { id: 'c_cmaj7', category: 'CHORD', title: 'Cmaj7', desc: '洗練された透明感のあるCメジャー7th', notes: ['C4', 'E4', 'G4', 'B4'], rootNote: 'C2', family: 'C' },
+            { id: 'c_cmaj7', category: 'CHORD', title: 'Cmaj7', desc: 'アイマイでオトナなキモチのCメジャー7th', notes: ['C4', 'E4', 'G4', 'B4'], rootNote: 'C2', family: 'C' },
             { id: 'c_fmaj7', category: 'CHORD', title: 'Fmaj7', desc: '都会的で広がりのあるFメジャー7th', notes: ['F3', 'A3', 'C4', 'E4'], rootNote: 'F2', family: 'F' },
             { id: 'c_dm9', category: 'CHORD', title: 'Dm9', desc: 'オシャレで浮遊感のあるDマイナー9th', notes: ['D3', 'F3', 'A3', 'C4', 'E4'], rootNote: 'D2', family: 'Dm' },
-            { id: 'c_em7', category: 'CHORD', title: 'Em7', desc: '深みのあるEマイナー7th', notes: ['E3', 'G3', 'B3', 'D4'], rootNote: 'E2', family: 'Em' },
+            { id: 'c_em7', category: 'CHORD', title: 'Em7', desc: '感情の深みに沈んでいくEマイナー7th', notes: ['E3', 'G3', 'B3', 'D4'], rootNote: 'E2', family: 'Em' },
             { id: 'c_am7', category: 'CHORD', title: 'Am7', desc: '哀愁のあるAマイナー7th', notes: ['A3', 'C4', 'E4', 'G4'], rootNote: 'A2', family: 'Am' },
-            { id: 'c_am9', category: 'CHORD', title: 'Am9', desc: 'より洗練されたAマイナー9th', notes: ['A3', 'C4', 'E4', 'G4', 'B4'], rootNote: 'A2', family: 'Am' },
+            { id: 'c_am9', category: 'CHORD', title: 'Am9', desc: '悲しみの中の輝きAマイナー9th', notes: ['A3', 'C4', 'E4', 'G4', 'B4'], rootNote: 'A2', family: 'Am' },
             { id: 'c_c6', category: 'CHORD', title: 'C6', desc: 'レトロで温かみのあるC6th', notes: ['C4', 'E4', 'G4', 'A4'], rootNote: 'C2', family: 'C' },
             { id: 'c_cadd9', category: 'CHORD', title: 'Cadd9', desc: 'キラキラした響きのC add9', notes: ['C4', 'E4', 'G4', 'D5'], rootNote: 'C2', family: 'C' },
-            { id: 'c_fmaj9', category: 'CHORD', title: 'Fmaj9', desc: '極上のアンビエント感を持つFメジャー9th', notes: ['F3', 'A3', 'C4', 'E4', 'G4'], rootNote: 'F2', family: 'F' },
-            { id: 'c_gadd9', category: 'CHORD', title: 'Gadd9', desc: '澄み渡るG add9コード', notes: ['G3', 'B3', 'D4', 'A4'], rootNote: 'G2', family: 'G' },
-            { id: 'c_g7', category: 'CHORD', title: 'G7', desc: 'ドミナントモーションを生むG7', notes: ['G3', 'B3', 'D4', 'F4'], rootNote: 'G2', family: 'G' },
-            { id: 'c_g9', category: 'CHORD', title: 'G9', desc: 'ファンキーで豊かなG9', notes: ['G3', 'B3', 'D4', 'F4', 'A4'], rootNote: 'G2', family: 'G' },
-            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーでFへ強烈に惹きつけるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C7' },
-            { id: 'c_e7', category: 'CHORD', title: 'E7', desc: '強烈な解決感を与えるE7', notes: ['E3', 'G#3', 'B3', 'D4'], rootNote: 'E2', family: 'E7' },
-            { id: 'c_e7sharp9', category: 'CHORD', title: 'E7#9', desc: 'ヘンドリックス・コード (ジミヘンコード)', notes: ['E3', 'G#3', 'B3', 'D4', 'G4'], rootNote: 'E2', family: 'E7' }
+            { id: 'c_fmaj9', category: 'CHORD', title: 'Fmaj9', desc: '極上のアンビエント感Fメジャー9th', notes: ['F3', 'A3', 'C4', 'E4', 'G4'], rootNote: 'F2', family: 'F' },
+            { id: 'c_gadd9', category: 'CHORD', title: 'Gadd9', desc: '澄み渡る明日への希望G add9コード', notes: ['G3', 'B3', 'D4', 'A4'], rootNote: 'G2', family: 'G' },
+            { id: 'c_g7', category: 'CHORD', title: 'G7', desc: '「C」に進みたくなる追跡者G7', notes: ['G3', 'B3', 'D4', 'F4'], rootNote: 'G2', family: 'G' },
+            { id: 'c_g9', category: 'CHORD', title: 'G9', desc: '「C」に寄せる揺れる恋心G9', notes: ['G3', 'B3', 'D4', 'F4', 'A4'], rootNote: 'G2', family: 'G' },
+            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーで「F」に焦がれるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C7' },
+            { id: 'c_e7', category: 'CHORD', title: 'E7', desc: '「Am」への募る想いE7', notes: ['E3', 'G#3', 'B3', 'D4'], rootNote: 'E2', family: 'E7' },
+            { id: 'c_e7sharp9', category: 'CHORD', title: 'E7#9', desc: '「Am」しか、もう見えない。', notes: ['E3', 'G#3', 'B3', 'D4', 'G4'], rootNote: 'E2', family: 'E7' }
         ];
 
         const BEAT_CARDS = [
             { id: 'b_four_floor', category: 'BEAT', title: '4つ打ちキック', desc: '定番の4つ打ちダンスビート', pattern: [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0] },
             { id: 'b_8beat_std', category: 'BEAT', title: '8ビートスタンダード', desc: '安定した8分音符の刻み', pattern: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0] },
-            { id: 'b_16beat_funky', category: 'BEAT', title: '16ビートファンク', desc: 'シンコペーションの効いたグルーヴ', pattern: [1,0,1,1, 0,1,1,0, 1,0,0,1, 1,0,1,0] },
-            { id: 'b_offbeat', category: 'BEAT', title: '裏打ちシンコペ', desc: '裏拍で跳ねるレゲエ/裏打ちパターン', pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
-            { id: 'b_triplet_vibe', category: 'BEAT', title: '3連符フィール', desc: 'シャッフルで躍動する3連音符', pattern: [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,0,0] },
-            { id: 'b_trap_roll', category: 'BEAT', title: 'トラップロール', desc: '細かい連打を混ぜたモダンビート', pattern: [1,1,1,1, 1,0,1,1, 1,1,1,1, 0,1,0,1] },
+            { id: 'b_4beat_off', category: 'BEAT', title: '裏打ち4ビート', desc: 'スネアにおすすめな基本パターン', pattern: [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0] },
+            { id: 'b_offbeat', category: 'BEAT', title: '裏打ち8ビート', desc: '裏拍を埋めるリズムの相棒にどうぞ', pattern: [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+            { id: 'b_triplet_vibe', category: 'BEAT', title: 'シンコペーション', desc: '裏に裏にズレながらアクセントを刻む', pattern: [1,0,0,1, 0,0,1,0, 0,1,0,0, 1,0,1,0] },
+            { id: 'b_trap_roll', category: 'BEAT', title: 'トラップロール', desc: '細かい連打を混ぜたモダンビート', pattern: [1,1,1,1, 1,0,0,0, 1,1,1,1, 1,1,0,1] },
             { id: 'b_disco_pulse', category: 'BEAT', title: 'ディスコパルス', desc: 'ダンサブルなノリノリリズム', pattern: [1,0,1,0, 1,1,1,0, 1,0,1,0, 1,1,1,1] }
         ];
 
@@ -455,12 +455,12 @@
         ];
 
         const PHRASE_CARDS = [
-            { id: 'p_asc', category: 'PHRASE', title: '上昇アルペジオ', desc: '低音から高音へ駆け上がる', pattern: [0, 1, 2, 1, 2, 3, 2, 1] },
+            { id: 'p_asc', category: 'PHRASE', title: '上昇アルペジオ', desc: '低音から高音へ駆け上がる', pattern: [0, 1, 2, 3, 0, 1, 2, 3] },
             { id: 'p_desc', category: 'PHRASE', title: '下降アルペジオ', desc: '高音から低音へ舞い降りる', pattern: [3, 2, 1, 0, 2, 1, 0, 1] },
-            { id: 'p_bounce', category: 'PHRASE', title: 'バウンスフレーズ', desc: '上下に元気に跳ねる', pattern: [0, 1, 2, 3, 2, 1, 0, 1] },
+            { id: 'p_bounce', category: 'PHRASE', title: 'バウンスフレーズ', desc: '上下に元気に跳ねる', pattern: [0, 2, 0, 3, 0, 1, 0, 3] },
             { id: 'p_octave', category: 'PHRASE', title: 'オクターブジャンプ', desc: '1オクターブ上を行き来する', pattern: [0, 12, 1, 13, 2, 14, 1, 12] },
-            { id: 'p_penta', category: 'PHRASE', title: 'ペンタトニック', desc: '東洋的で親しみやすいフレーズ', pattern: [0, 2, 4, 7, 9, 7, 4, 2] },
-            { id: 'p_cascade', category: 'PHRASE', title: '滝のフレーズ', desc: '波のように揺れるフレーズ', pattern: [0, 3, 1, 2, 0, 2, 1, 3] }
+            { id: 'p_penta', category: 'PHRASE', title: 'ペンタトニック', desc: '東洋的で親しみやすいフレーズ', pattern: [0, 2, 4, 7, 9, 2, 4, 7] },
+            { id: 'p_cascade', category: 'PHRASE', title: '波のフレーズ', desc: '波のように揺れるフレーズ', pattern: [1, 2, 3, 2, 1, 2, 3, 2] }
         ];
 
         let audioCtx = null;
@@ -1804,8 +1804,6 @@
         function closeFinishModalAndKeepPlaying() {
             gameState.targetBars = 96;
             gameState.currentBar = 1;
-            gameState.currentStep = 0;
-            gameState.nextOfferBar = 1;
             document.getElementById('modal-finish').classList.add('hidden');
             startPlayback();
         }
