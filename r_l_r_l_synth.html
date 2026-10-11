@@ -422,7 +422,7 @@
             { id: 'c_gadd9', category: 'CHORD', title: 'Gadd9', desc: '澄み渡るG add9コード', notes: ['G3', 'B3', 'D4', 'A4'], rootNote: 'G2', family: 'G' },
             { id: 'c_g7', category: 'CHORD', title: 'G7', desc: 'ドミナントモーションを生むG7', notes: ['G3', 'B3', 'D4', 'F4'], rootNote: 'G2', family: 'G' },
             { id: 'c_g9', category: 'CHORD', title: 'G9', desc: 'ファンキーで豊かなG9', notes: ['G3', 'B3', 'D4', 'F4', 'A4'], rootNote: 'G2', family: 'G' },
-            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーでFへ強烈に惹きつけるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C7' },
+            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーでFへ強烈に惹きつけるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C' },
             { id: 'c_e7', category: 'CHORD', title: 'E7', desc: '強烈な解決感を与えるE7', notes: ['E3', 'G#3', 'B3', 'D4'], rootNote: 'E2', family: 'E7' },
             { id: 'c_e7sharp9', category: 'CHORD', title: 'E7#9', desc: 'ヘンドリックス・コード (ジミヘンコード)', notes: ['E3', 'G#3', 'B3', 'D4', 'G4'], rootNote: 'E2', family: 'E7' }
         ];
@@ -1798,6 +1798,9 @@
 
         function closeFinishModalAndKeepPlaying() {
             gameState.targetBars = 96;
+            gameState.currentBar = 1;
+            gameState.currentStep = 0;
+            gameState.nextOfferBar = 1;
             document.getElementById('modal-finish').classList.add('hidden');
             startPlayback();
         }
