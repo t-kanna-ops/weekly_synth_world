@@ -422,7 +422,7 @@
             { id: 'c_gadd9', category: 'CHORD', title: 'Gadd9', desc: '澄み渡るG add9コード', notes: ['G3', 'B3', 'D4', 'A4'], rootNote: 'G2', family: 'G' },
             { id: 'c_g7', category: 'CHORD', title: 'G7', desc: 'ドミナントモーションを生むG7', notes: ['G3', 'B3', 'D4', 'F4'], rootNote: 'G2', family: 'G' },
             { id: 'c_g9', category: 'CHORD', title: 'G9', desc: 'ファンキーで豊かなG9', notes: ['G3', 'B3', 'D4', 'F4', 'A4'], rootNote: 'G2', family: 'G' },
-            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーでFへ強烈に惹きつけるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C' },
+            { id: 'c_c7', category: 'CHORD', title: 'C7', desc: 'ブルージーでFへ強烈に惹きつけるC7', notes: ['C4', 'E4', 'G4', 'A#4'], rootNote: 'C2', family: 'C7' },
             { id: 'c_e7', category: 'CHORD', title: 'E7', desc: '強烈な解決感を与えるE7', notes: ['E3', 'G#3', 'B3', 'D4'], rootNote: 'E2', family: 'E7' },
             { id: 'c_e7sharp9', category: 'CHORD', title: 'E7#9', desc: 'ヘンドリックス・コード (ジミヘンコード)', notes: ['E3', 'G#3', 'B3', 'D4', 'G4'], rootNote: 'E2', family: 'E7' }
         ];
@@ -1052,6 +1052,11 @@
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
                 }
 
+                if (f0 === 'F' && f1 === 'E7' && f2 === 'Am' && f3 === 'C7') {
+                    isMarusa = true;
+                    [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
+                }
+
                 if (f0 === 'C' && f1 === 'G' && f2 === 'Am' && f3 === 'Em') {
                     isCanon = true;
                     [0, 1, 2, 3].forEach(i => bonusActiveIndices[i] = true);
@@ -1655,7 +1660,7 @@
             container.innerHTML = '';
 
             const activeBadgeList = [];
-            if (bonuses.isRoyalRoad) activeBadgeList.push({ name: '👑 ロイヤルロードボーナス', bg: 'bg-amber-500 text-slate-950' });
+            if (bonuses.isRoyalRoad) activeBadgeList.push({ name: '👑 ロイヤルボーナス', bg: 'bg-amber-500 text-slate-950' });
             if (bonuses.isMarusa) activeBadgeList.push({ name: '🎷 マルサボーナス', bg: 'bg-fuchsia-600 text-white' });
             if (bonuses.isCanon) activeBadgeList.push({ name: '🎼 カノンボーナス', bg: 'bg-emerald-500 text-slate-950' });
             if (bonuses.isNikoIchi) activeBadgeList.push({ name: '🎹 ニコイチ(251)ボーナス', bg: 'bg-cyan-500 text-slate-950' });
