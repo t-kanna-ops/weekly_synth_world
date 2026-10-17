@@ -26,40 +26,47 @@ jobs:
         with:
           node-version: "22"
 
+      # 1. 成果物用フォルダの作成
       - name: Prepare dist directory
+        run: mkdir -p dist
+
+      # 2. HTMLの処理（圧縮またはコピー）
+      - name: Process HTML & CSS
         run: |
-          mkdir -p dist
-          # CSSファイルをコピー（存在する場合）
           if [ -d "src" ]; then
+            npx -y html-minifier-terser --input-dir src --output-dir dist --collapse-whitespace --remove-comments --file-ext html || cp -r src/*.html dist/ 2>/dev/null || true
             cp -r src/*.css dist/ 2>/dev/null || true
           else
-            cp -r *.css dist/ 2>/dev/null || true
+            # 直下にHTMLがある場合：1ファイルずつ圧縮して dist に出力 (-o を使用)
+            for file in *.html; do
+              if [ -f "$file" ]; then
+                npx -y html-minifier-terser "$file" -o "dist/$file" --collapse-whitespace --remove-comments || cp "$file" "dist/$file"
+              fi
+            done
+            cp *.css dist/ 2>/dev/null || true
           fi
 
-      # 1. HTMLの圧縮（改行・空白・コメント削除）
-      - name: Minify HTML
-        run: |
-          if [ -d "src" ]; then
-            npx -y html-minifier-terser --input-dir src --output-dir dist --collapse-whitespace --remove-comments --file-ext html
-          else
-            npx -y html-minifier-terser *.html --output-dir dist --collapse-whitespace --remove-comments
-          fi
-
-      # 2. JavaScriptの難読化
+      # 3. JavaScriptの難読化
       - name: Obfuscate JavaScript
         run: |
           if [ -d "src" ]; then
             npx -y javascript-obfuscator src --output dist --compact true --control-flow-flattening true --numbers-to-expressions true
           else
-            # 直下指定の場合はHTMLやCSSを除外してJSのみ処理
-            npx -y javascript-obfuscator . --output dist --compact true --control-flow-flattening true --numbers-to-expressions true --exclude "dist/**"
+            # 直下にJSがある場合：1ファイルずつ難読化して dist に出力
+            for file in *.js; do
+              if [ -f "$file" ]; then
+                npx -y javascript-obfuscator "$file" --output "dist/$file" --compact true --control-flow-flattening true --numbers-to-expressions true || cp "$file" "dist/$file"
+              fi
+            done
           fi
 
+      # 4. Pagesへのデプロイ準備
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
+      # 5. デプロイ実行
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
