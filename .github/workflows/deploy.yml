@@ -1,20 +1,15 @@
 name: Deploy Obfuscated Site to GitHub Pages
 
 on:
-  # mainブランチにpushされた時に自動実行
   push:
     branches: ["main"]
-
-  # 手動で実行ボタンを押してビルドすることも可能に設定
   workflow_dispatch:
 
-# GitHub Pagesへのデプロイに必要な権限を設定
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 同時デプロイを防ぐ設定
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -23,41 +18,48 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1. リポジトリのコードを取得
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Node.js環境のセットアップ
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
-      # 3. 成果物用ディレクトリ（dist）の作成とHTML/CSSのコピー
       - name: Prepare dist directory
         run: |
           mkdir -p dist
-          cp -r src/*.html dist/ 2>/dev/null || true
-          cp -r src/*.css dist/ 2>/dev/null || true
-          # JS以外の画像や静的アセットがある場合はここに追加（例: cp -r src/assets dist/）
+          # CSSファイルをコピー（存在する場合）
+          if [ -d "src" ]; then
+            cp -r src/*.css dist/ 2>/dev/null || true
+          else
+            cp -r *.css dist/ 2>/dev/null || true
+          fi
 
-      # 4. javascript-obfuscatorでJSファイルを難読化してdistに出力
-      - name: Obfuscate JavaScript
-        run: |
-          npx javascript-obfuscator src --output dist --compact true --control-flow-flattening true --numbers-to-expressions true
-
-# HTMLファイルを圧縮してdistに出力
+      # 1. HTMLの圧縮（改行・空白・コメント削除）
       - name: Minify HTML
         run: |
-          npx html-minifier-terser --input-dir src --output-dir dist --collapse-whitespace --remove-comments --file-ext html
+          if [ -d "src" ]; then
+            npx -y html-minifier-terser --input-dir src --output-dir dist --collapse-whitespace --remove-comments --file-ext html
+          else
+            npx -y html-minifier-terser *.html --output-dir dist --collapse-whitespace --remove-comments
+          fi
 
-      # 5. Pages用のアーティファクトとして作成
+      # 2. JavaScriptの難読化
+      - name: Obfuscate JavaScript
+        run: |
+          if [ -d "src" ]; then
+            npx -y javascript-obfuscator src --output dist --compact true --control-flow-flattening true --numbers-to-expressions true
+          else
+            # 直下指定の場合はHTMLやCSSを除外してJSのみ処理
+            npx -y javascript-obfuscator . --output dist --compact true --control-flow-flattening true --numbers-to-expressions true --exclude "dist/**"
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
-      # 6. GitHub Pagesへデプロイ
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
