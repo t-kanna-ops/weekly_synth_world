@@ -332,7 +332,7 @@
 
           // --- 特定のメタデータによる除外判定 ---
           // 例: <meta name="synth-hidden" content="true"> や <meta name="synth-draft" content="true"> など
-          const isHidden = getMeta('synth-hidden') === 'true' ||;
+          const isHidden = getMeta('synth-hidden') === 'true' ||
 
           if (isHidden) {
             console.log(`[非読み込み] 特定のメタデータが含まれているためスキップされました: ${file}`);
