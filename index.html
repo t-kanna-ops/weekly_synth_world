@@ -330,6 +330,15 @@
             return el ? el.getAttribute('content') : null;
           };
 
+          // --- 特定のメタデータによる除外判定 ---
+          // 例: <meta name="synth-hidden" content="true"> や <meta name="synth-draft" content="true"> など
+          const isHidden = getMeta('synth-hidden') === 'true' ||;
+
+          if (isHidden) {
+            console.log(`[非読み込み] 特定のメタデータが含まれているためスキップされました: ${file}`);
+            return null;
+          }
+
           const title = getMeta('synth-title') || doc.querySelector('title')?.textContent.split('|')[0].trim() || file;
           const description = getMeta('synth-description') || getMeta('description') || 'Web Audio APIで作られたインタラクティブ・シンセサイザー。';
           const tagsRaw = getMeta('synth-tags') || 'Web Audio API';
