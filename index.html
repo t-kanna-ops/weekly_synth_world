@@ -119,8 +119,8 @@
   <!-- MAIN CONTENT -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-8">
 
-    <!-- HERO / MAIN SYNTH PREVIEW -->
-    <section id="hero-section" class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15">
+    <!-- HERO / MAIN SYNTH PREVIEW (スワイプ操作対応エリア) -->
+    <section id="hero-section" class="glass-panel rounded-3xl p-6 sm:p-10 relative overflow-hidden transition-all duration-300 border border-white/15 select-none touch-pan-y">
       <div class="absolute -top-24 -left-24 w-72 h-72 bg-pink-500/20 rounded-full blur-3xl pointer-events-none"></div>
       <div class="absolute -bottom-24 -right-24 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -231,8 +231,14 @@
     let activeTag = 'all';
     let searchQuery = '';
 
+    // ヒーロープレビューの管理用変数
+    let currentHeroIndex = 0;
+    let autoSlideTimer = null;
+
     document.addEventListener('DOMContentLoaded', async () => {
       await loadAllSynths();
+      setupHeroSwipe();
+      startAutoSlide();
     });
 
     // GitHub Pages / サーバー上のHTMLファイルを多角的に自動スキャン
@@ -330,9 +336,12 @@
             return el ? el.getAttribute('content') : null;
           };
 
-          // --- 特定のメタデータによる除外判定 ---
-          // 例: <meta name="synth-hidden" content="true"> や <meta name="synth-draft" content="true"> など
-          const isHidden = getMeta('synth-hidden') === 'true';
+          // --- 特定のメタデータによる除外判定（正しく修正済み） ---
+          const isHidden = getMeta('synth-hidden') === 'true' || 
+                           getMeta('synth-exclude') === 'true' || 
+                           getMeta('synth-draft') === 'true' ||
+                           (getMeta('robots') && getMeta('robots').includes('noindex'));
+
           if (isHidden) {
             console.log(`[非読み込み] 特定のメタデータが含まれているためスキップされました: ${file}`);
             return null;
@@ -345,7 +354,14 @@
           const color = getMeta('synth-color') || 'cyan'; // pink, cyan, gold, purple, emerald
           const symbol = getMeta('synth-symbol') || '🎹';
           const symbolType = getMeta('synth-symbol-type') || 'emoji';
-          const numberStr = getMeta('synth-number') || `#${String(index + 1).padStart(2, '0')}`;
+          
+          // ソート用ナンバー取得
+          const numberStr = getMeta('synth-number');
+          let sortNum = index + 1;
+          if (numberStr) {
+            const parsed = parseInt(numberStr.replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(parsed)) sortNum = parsed;
+          }
 
           return {
             id: file.replace('.html', ''),
@@ -356,7 +372,8 @@
             color: color,
             symbol: symbol,
             symbolType: symbolType,
-            number: numberStr
+            numberRaw: numberStr,
+            sortNum: sortNum
           };
         } catch (err) {
           console.error(`ファイル読み込みエラー: ${file}`, err);
@@ -365,15 +382,26 @@
       });
 
       const results = await Promise.all(fetchPromises);
-      synthDataStore = results.filter(item => item !== null);
+      
+      // 有効なデータのみ抽出し、#xxのソート用数値（sortNum）で昇順ソート
+      synthDataStore = results
+        .filter(item => item !== null)
+        .sort((a, b) => a.sortNum - b.sortNum);
+
+      // ソート順に応じてナンバー表記の補正
+      synthDataStore.forEach((item, idx) => {
+        item.number = item.numberRaw || `#${String(idx + 1).padStart(2, '0')}`;
+        item.storeIndex = idx;
+      });
 
       // UIの生成
       buildTagFilters();
       renderCards();
       setupSearchAndFilters();
 
-      // 初期状態で1番目の作品をヒーローエリアにセット
+      // 初期状態でナンバー順最初の作品をセット
       if (synthDataStore.length > 0) {
+        currentHeroIndex = 0;
         updateHero(synthDataStore[0]);
       }
     }
@@ -424,10 +452,11 @@
         emptyEl.classList.add('hidden');
       }
 
-      filtered.forEach((item, idx) => {
+      filtered.forEach((item) => {
         const card = document.createElement('a');
         card.href = item.file;
-        card.className = `synth-card glass-card theme-${item.color} rounded-2xl p-6 flex flex-col justify-between gap-6 relative group ${idx === 0 ? 'active' : ''}`;
+        const isActive = synthDataStore[currentHeroIndex] && synthDataStore[currentHeroIndex].id === item.id;
+        card.className = `synth-card glass-card theme-${item.color} rounded-2xl p-6 flex flex-col justify-between gap-6 relative group ${isActive ? 'active' : ''}`;
         card.dataset.id = item.id;
 
         const tagBadges = item.tags.map(t => 
@@ -452,11 +481,11 @@
           </div>
         `;
 
-        // ホバー / タッチでヒーロー更新
+        // ホバー / タッチでヒーロー更新＆タイマーリセット
         const handleInteraction = () => {
-          document.querySelectorAll('.synth-card').forEach(c => c.classList.remove('active'));
-          card.classList.add('active');
-          updateHero(item);
+          currentHeroIndex = item.storeIndex;
+          updateHeroUI(item);
+          startAutoSlide();
         };
 
         card.addEventListener('mouseenter', handleInteraction);
@@ -466,8 +495,17 @@
       });
     }
 
-    // HEROエリアの更新
-    function updateHero(item) {
+    // HEROエリアの更新（UI更新のみ）
+    function updateHeroUI(item) {
+      // アクティブカードの表示切り替え
+      document.querySelectorAll('.synth-card').forEach(c => {
+        if (c.dataset.id === item.id) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+
       const textContainer = document.getElementById('hero-text-container');
       const visualBox = document.getElementById('hero-visual-box');
       
@@ -499,6 +537,65 @@
         textContainer.classList.remove('fade-out');
         visualBox.classList.remove('fade-out');
       }, 150);
+    }
+
+    // ヒーロー表示の更新（インデックス指定）
+    function updateHero(item) {
+      updateHeroUI(item);
+    }
+
+    // 次のシンセへ切り替え
+    function nextHero() {
+      if (synthDataStore.length === 0) return;
+      currentHeroIndex = (currentHeroIndex + 1) % synthDataStore.length;
+      updateHeroUI(synthDataStore[currentHeroIndex]);
+    }
+
+    // 前のシンセへ切り替え
+    function prevHero() {
+      if (synthDataStore.length === 0) return;
+      currentHeroIndex = (currentHeroIndex - 1 + synthDataStore.length) % synthDataStore.length;
+      updateHeroUI(synthDataStore[currentHeroIndex]);
+    }
+
+    // 5秒タイマーのセットアップ
+    function startAutoSlide() {
+      if (autoSlideTimer) clearInterval(autoSlideTimer);
+      autoSlideTimer = setInterval(() => {
+        nextHero();
+      }, 5000);
+    }
+
+    // スマホの左右フリック（スワイプ）操作のセットアップ
+    function setupHeroSwipe() {
+      const heroEl = document.getElementById('hero-section');
+      let startX = 0;
+      let startY = 0;
+
+      heroEl.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+
+      heroEl.addEventListener('touchend', (e) => {
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+
+        const diffX = endX - startX;
+        const diffY = endY - startY;
+
+        // 横方向へのスワイプが一定距離以上かつ縦スクロールより優先される場合
+        if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+          if (diffX < 0) {
+            // 左スワイプ（次へ）
+            nextHero();
+          } else {
+            // 右スワイプ（前へ）
+            prevHero();
+          }
+          startAutoSlide(); // 手動操作後タイマーをリセット
+        }
+      }, { passive: true });
     }
 
     // 検索＆フィルターイベント設定
