@@ -7,7 +7,7 @@
     <!-- ======================================================= -->
     <!-- 🎵 Web Synth ポータル用メタデータ                        -->
     <!-- ======================================================= -->
-    <meta name="synth-title" content="光のシンセ、略してヒカシン">
+    <meta name="synth-title" content="ヒカリのシンセ「ヒカシン」">
     <meta name="synth-description" content="カメラでとらえた「ヒカリ」で演奏する「シンセサイザー」">
     <meta name="synth-tags" content="Camera, AudioVisual, WebAudio">
     <meta name="synth-color" content="emerald">
@@ -16,7 +16,7 @@
     <meta name="synth-number" content="#04">
     <!-- ======================================================= -->
     
-    <title>光の残像と動きのポリフォニー - Dynamic Motion RMS Synthesizer</title>
+    <title>ヒカリのシンセ、略して「ヒカシン」</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
@@ -80,7 +80,7 @@
             <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2.5">
                     <span id="sequencer-beat-led" class="inline-block w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981] transition-all duration-100"></span>
-                    <h1 class="text-lg font-bold text-white tracking-wider">光の残像と動きのポリフォニー</h1>
+                    <h1 class="text-lg font-bold text-white tracking-wider">ヒカリのシンセ、略して「ヒカシン」</h1>
                 </div>
                 <!-- Minimize Button -->
                 <button id="btn-toggle-guide" class="px-2.5 py-1 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 rounded-lg text-emerald-300 font-semibold transition flex items-center gap-1 shadow">
@@ -95,7 +95,7 @@
                     <p class="font-semibold text-emerald-300">【映像動きRMS音量同期＆アルペジオシステム】</p>
                     <p>🔊 <strong class="text-white">映像動きRMS × Velocity同期:</strong> ピクセル変化量のRMS（二乗平均平方根）と演奏音量を同期。<span class="text-rose-300 font-bold">カメラ停止時・静止時は完全無音/透明</span>。</p>
                     <p>🎯 <strong class="text-white">動体追跡 ドット (1〜64可可変):</strong> 変化量が大きい上位ドットを追跡し、音高・ADSR・フィルター等の表現力に反映。</p>
-                    <p>⏱️ <strong class="text-white">アルペジオ制御 (RGB平均):</strong> 全画面の平均RGBに応じて<span class="text-emerald-300 font-bold">BPM (60〜136)</span>・<span class="text-cyan-300 font-bold">構成音 (1音〜7音)</span>・<span class="text-purple-300 font-bold">パターン</span>が動的変化。</p>
+                    <p>⏱️ <strong class="text-white">アルペジオ制御 (RGB平均):</strong> 全画面の平均RGBに応じて<span class="text-emerald-300 font-bold">BPM (60〜180)</span>・<span class="text-cyan-300 font-bold">構成音 (1音〜7音)</span>・<span class="text-purple-300 font-bold">パターン</span>が動的変化。</p>
                 </div>
 
                 <!-- Live Status Indicators -->
@@ -1015,8 +1015,8 @@
             currentAvgB = sumB / totalPixels;
             currentTotalAvg = currentAvgR + currentAvgG + currentAvgB; // 0 ~ 765
 
-            // RGB平均値から BPM [60 ～ 136] の算出
-            currentBPM = Math.min(136, Math.max(60, 60 + (currentTotalAvg / 765.0) * (136 - 60)));
+            // RGB平均値から BPM [60 ～ 180] の算出
+            currentBPM = Math.min(180, Math.max(60, 60 + (currentTotalAvg / 765.0) * (180 - 60)));
 
             const bpmBadge = document.getElementById('bpm-display-badge');
             if (bpmBadge) bpmBadge.innerText = `${Math.round(currentBPM)} BPM`;
