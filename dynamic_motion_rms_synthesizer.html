@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    
+    <!-- ======================================================= -->
+    <!-- 🎵 Web Synth ポータル用メタデータ                        -->
+    <!-- ======================================================= -->
+    <meta name="synth-title" content="光の残像と動きのポリフォニー">
+    <meta name="synth-description" content="カメラ映像の動き(RMS)で音量Velocityが可変する16分音符アルペジオポリフォニックシンセ">
+    <meta name="synth-tags" content="Camera, AudioVisual, WebAudio, Three.js">
+    <meta name="synth-color" content="emerald">
+    <meta name="synth-symbol" content="光">
+    <meta name="synth-symbol-type" content="kanji">
+    <meta name="synth-number" content="#04">
+    <!-- ======================================================= -->
+    
+    <title>光の残像と動きのポリフォニー - Dynamic Motion RMS Synthesizer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #030712;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        /* 半透明グラスパネル */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+        input[type=range] {
+            accent-color: #10b981;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        #offscreen-video, #offscreen-canvas {
+            display: none;
+        }
+    </style>
+</head>
+<body class="relative w-full h-screen overflow-hidden text-white select-none">
+
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- 非表示Webcam & キャンバス (映像ダウンサンプリング用) -->
+    <video id="offscreen-video" playsinline muted></video>
+    <canvas id="offscreen-canvas"></canvas>
+
+    <!-- UI Overlay Header & Title / How to Play -->
+    <div class="absolute top-4 left-4 right-4 z-10 flex flex-col lg:flex-row justify-between items-start pointer-events-none gap-4">
+        
+        <!-- 1. Title & Live Status Window -->
+        <div class="glass-panel p-4 rounded-xl pointer-events-auto max-w-md w-full lg:w-auto transition-all duration-300">
+            <!-- Window Header -->
+            <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5">
+                    <span id="sequencer-beat-led" class="inline-block w-3.5 h-3.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#10b981] transition-all duration-100"></span>
+                    <h1 class="text-lg font-bold text-white tracking-wider">光の残像と動きのポリフォニー</h1>
+                </div>
+                <!-- Minimize Button -->
+                <button id="btn-toggle-guide" class="px-2.5 py-1 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 rounded-lg text-emerald-300 font-semibold transition flex items-center gap-1 shadow">
+                    <span id="guide-toggle-icon">−</span>
+                    <span id="guide-toggle-text">小さくする</span>
+                </button>
+            </div>
+            
+            <!-- Window Body Content -->
+            <div id="panel-guide-content" class="space-y-2 mt-2 transition-all duration-300">
+                <div class="text-xs text-slate-200 leading-relaxed border-t border-slate-700/60 pt-2 space-y-1.5">
+                    <p class="font-semibold text-emerald-300">【映像動きRMS音量同期＆アルペジオシステム】</p>
+                    <p>🔊 <strong class="text-white">映像動きRMS × Velocity同期:</strong> ピクセル変化量のRMS（二乗平均平方根）と演奏音量を同期。<span class="text-rose-300 font-bold">カメラ停止時・静止時は完全無音/透明</span>。</p>
+                    <p>🎯 <strong class="text-white">動体追跡 ドット (1〜64可可変):</strong> 変化量が大きい上位ドットを追跡し、音高・ADSR・フィルター等の表現力に反映。</p>
+                    <p>⏱️ <strong class="text-white">アルペジオ制御 (RGB平均):</strong> 全画面の平均RGBに応じて<span class="text-emerald-300 font-bold">BPM (60〜136)</span>・<span class="text-cyan-300 font-bold">構成音 (1音〜7音)</span>・<span class="text-purple-300 font-bold">パターン</span>が動的変化。</p>
+                </div>
+
+                <!-- Live Status Indicators -->
+                <div class="border-t border-slate-700/60 pt-2 grid grid-cols-2 gap-2 text-xs">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">Velocity (RMS):</span>
+                        <span id="rms-velocity-badge" class="px-2 py-0.5 rounded-md font-mono font-bold bg-slate-700/50 text-slate-400 border border-slate-600/40 min-w-[65px] text-center">
+                            0 %
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">BPM:</span>
+                        <span id="bpm-display-badge" class="px-2 py-0.5 rounded-md font-mono font-bold bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">
+                            98 BPM
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">追跡ドット:</span>
+                        <span id="active-dots-badge" class="px-2 py-0.5 rounded-md font-mono font-bold bg-amber-500/30 text-amber-200 border border-amber-400/40">
+                            0 / 16
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-400">パターン:</span>
+                        <span id="current-arp-badge" class="px-2 py-0.5 rounded-md font-bold bg-purple-500/30 text-purple-200 border border-purple-400/40 truncate">
+                            Up & Down
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 col-span-2">
+                        <span class="text-slate-400">スケール:</span>
+                        <span id="current-scale-badge" class="px-2 py-0.5 rounded-md font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 truncate">
+                            C Major Scale
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 col-span-2">
+                        <span class="text-slate-400">構成音:</span>
+                        <span id="current-degrees-badge" class="px-2 py-0.5 rounded-md font-bold bg-teal-500/30 text-teal-200 border border-teal-400/40 truncate">
+                            1, 3, 5 (Triad)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Settings & Calibration Control Window -->
+        <div class="glass-panel p-4 rounded-xl pointer-events-auto flex flex-col gap-3 min-w-[340px] w-full lg:w-auto max-h-[88vh] overflow-y-auto no-scrollbar transition-all duration-300">
+            <!-- Window Header -->
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-2 gap-2">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-sm font-semibold text-white">カメラ＆RMSキャリブレーション設定</h2>
+                    <span id="camera-status-badge" class="text-xs bg-slate-700/80 text-slate-300 border border-slate-600/80 px-2 py-0.5 rounded-full">カメラ停止中</span>
+                </div>
+                <!-- Minimize Button -->
+                <button id="btn-toggle-settings" class="px-2.5 py-1 text-xs bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 rounded-lg text-emerald-300 font-semibold transition flex items-center gap-1 shadow">
+                    <span id="settings-toggle-icon">−</span>
+                    <span id="settings-toggle-text">小さくする</span>
+                </button>
+            </div>
+
+            <!-- Window Body Content -->
+            <div id="panel-settings-content" class="space-y-3 text-xs text-slate-200 transition-all duration-300">
+                
+                <!-- Camera Controls & Live Small Preview -->
+                <div class="space-y-2">
+                    <span class="font-semibold text-emerald-300 block">📷 カメラデバイス入力</span>
+                    <div class="flex gap-2">
+                        <button id="btn-camera-toggle" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition shadow flex items-center justify-center gap-1">
+                            <span>📹</span> <span id="btn-camera-text">カメラ起動</span>
+                        </button>
+                        <button id="btn-camera-flip" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition">
+                            🔄 切替
+                        </button>
+                    </div>
+
+                    <!-- Small Live Monitor Canvas -->
+                    <div class="relative w-full h-28 bg-black/80 rounded-lg border border-slate-700 overflow-hidden flex items-center justify-center">
+                        <canvas id="preview-canvas" class="w-full h-full object-contain"></canvas>
+                        <div class="absolute bottom-1 right-1 text-[10px] bg-black/80 px-1.5 py-0.5 rounded text-emerald-300 border border-emerald-500/30">
+                            前処理キャリブレーション出力
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Tracking Dots Count Slider (1 to 64) -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2 bg-amber-950/20 p-2 rounded-lg border border-amber-500/20">
+                    <span class="font-semibold text-amber-300 block">🎯 追跡ドット数設定 (1 ～ 64)</span>
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>最大追跡ドット数</span>
+                            <span id="max-dots-val" class="font-mono text-amber-300 font-bold">16</span>
+                        </div>
+                        <input id="slider-max-dots" type="range" min="1" max="64" step="1" value="16" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- RMS Window Time Slider -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2 bg-rose-950/20 p-2 rounded-lg border border-rose-500/20">
+                    <span class="font-semibold text-rose-300 block">🔊 動きRMS音量(Velocity)同期設定</span>
+                    
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>RMS計算時間 (タイムウィンドウ)</span>
+                            <span id="rms-window-val" class="font-mono text-rose-300">300 ms</span>
+                        </div>
+                        <input id="slider-rms-window" type="range" min="10" max="2000" step="10" value="300" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>RMS 音量感度ゲイン</span>
+                            <span id="rms-gain-val" class="font-mono text-rose-300">2.5x</span>
+                        </div>
+                        <input id="slider-rms-gain" type="range" min="0.5" max="8.0" step="0.1" value="2.5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Camera Image Calibration Sliders -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-emerald-300 block">🎛️ カメラ画像キャリブレーション (前処理)</span>
+                    
+                    <!-- Brightness -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>輝度 (Brightness)</span>
+                            <span id="brightness-val" class="font-mono text-emerald-300">1.0x</span>
+                        </div>
+                        <input id="slider-brightness" type="range" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Contrast -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>コントラスト (Contrast)</span>
+                            <span id="contrast-val" class="font-mono text-emerald-300">1.5x</span>
+                        </div>
+                        <input id="slider-contrast" type="range" min="0.5" max="3.0" step="0.05" value="1.5" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <!-- Saturation -->
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>彩度 (Saturation)</span>
+                            <span id="saturation-val" class="font-mono text-emerald-300">1.0x</span>
+                        </div>
+                        <input id="slider-saturation" type="range" min="0.0" max="2.0" step="0.05" value="1.0" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Detection Sensitivity & Grid -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-emerald-300 block">🎯 動き検出＆グリッド設定</span>
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>動き検出感度 (ノイズカット)</span>
+                            <span id="sensitivity-val" class="font-mono text-emerald-300">中 (35)</span>
+                        </div>
+                        <input id="slider-sensitivity" type="range" min="10" max="90" step="1" value="35" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between mb-1 text-[11px]">
+                            <span>グリッド解像度</span>
+                            <span id="grid-res-val" class="font-mono text-emerald-300">24 × 18</span>
+                        </div>
+                        <select id="select-grid-res" class="w-full bg-slate-800 border border-slate-600 text-white rounded p-1.5 focus:outline-none">
+                            <option value="16x12">16 × 12 (軽量)</option>
+                            <option value="24x18" selected>24 × 18 (標準)</option>
+                            <option value="32x24">32 × 24 (高解像度)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Oscillator & Master Synth Controls -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-emerald-300 block">🎹 シンセサイザー音色</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[11px] block mb-1">オシレーター波形</span>
+                            <select id="select-waveform" class="w-full bg-slate-800 border border-slate-600 text-white rounded p-1.5 focus:outline-none">
+                                <option value="sawtooth" selected>Sawtooth (鋸歯状波)</option>
+                                <option value="square">Square (矩形波)</option>
+                                <option value="triangle">Triangle (三角波)</option>
+                                <option value="sine">Sine (正弦波)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>マスター音量</span>
+                                <span id="vol-val" class="font-mono text-emerald-300">70%</span>
+                            </div>
+                            <input id="slider-vol" type="range" min="0" max="100" step="1" value="70" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer mt-2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audio FX Controls (Reverb & Delay) -->
+                <div class="border-t border-slate-700/50 pt-2 space-y-2">
+                    <span class="font-semibold text-emerald-300 block">空間エフェクト (Reverb & Delay)</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>Reverb Mix</span>
+                                <span id="rev-val" class="font-mono text-emerald-300">40%</span>
+                            </div>
+                            <input id="slider-rev" type="range" min="0" max="100" step="1" value="40" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-1 text-[11px]">
+                                <span>Delay Mix</span>
+                                <span id="delay-val" class="font-mono text-emerald-300">35%</span>
+                            </div>
+                            <input id="slider-delay" type="range" min="0" max="100" step="1" value="35" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio Enable Floating Button -->
+    <div class="absolute bottom-6 left-4 z-10 pointer-events-auto">
+        <button id="btn-audio-start" class="glass-panel px-4 py-2.5 rounded-xl text-xs font-bold text-emerald-300 flex items-center gap-2 hover:bg-slate-800/80 transition shadow-xl border border-emerald-500/50 hover:border-emerald-400">
+            🔊 オーディオ有効化 / 16分音符シーケンサー開始
+        </button>
+    </div>
+
+    <!-- Main Engine Script -->
+    <script>
+        // --- 1. Global Configurations ---
+        const CONFIG = {
+            gridCols: 24,
+            gridRows: 18,
+            maxPolyphony: 64,        // 同時発音数プール
+            visualizerZDepth: 35.0,  // Z軸奥への引き戻し距離
+            visualizerSpeed: 18.0    // サークルの移動速度
+        };
+
+        // --- Active Motion Tracking Dots Count (1 to 64, Slider) ---
+        let maxMotionDotsCount = 16;
+
+        // --- Calibration Parameters ---
+        let calibBrightness = 1.0; // 0.5 ~ 2.0
+        let calibContrast = 1.5;   // 0.5 ~ 3.0
+        let calibSaturation = 1.0; // 0.0 ~ 2.0
+
+        // --- RMS Velocity Calculation Parameters ---
+        let rmsWindowMs = 300;     // 10ms ～ 2000ms
+        let rmsGain = 2.5;         // RMS音量スケーリングゲイン
+        let currentCalculatedVelocity = 0.0; // 0.0 ~ 1.0 (最新の音量Velocity)
+        const frameMotionHistory = []; // { time: number, diffSq: number } 履歴バッファ
+
+        // --- Scale & Arpeggio Rules ---
+        const BASE_SCALES = {
+            minor: { root: 33, pattern: [0, 2, 3, 5, 7, 8, 10], name: "A Natural Minor" },
+            majorC: { root: 36, pattern: [0, 2, 4, 5, 7, 9, 11], name: "C Major" },
+            majorG: { root: 31, pattern: [0, 2, 4, 5, 7, 9, 11], name: "G Major" }
+        };
+
+        // 低解像度化直後の前処理キャリブレーション
+        function applyRGBPixelCalibration(r, g, b, brightness, contrast, saturation) {
+            let nr = r / 255.0;
+            let ng = g / 255.0;
+            let nb = b / 255.0;
+
+            // 1. 輝度 (Brightness)
+            nr *= brightness;
+            ng *= brightness;
+            nb *= brightness;
+
+            // 2. コントラスト (Contrast)
+            nr = (nr - 0.5) * contrast + 0.5;
+            ng = (ng - 0.5) * contrast + 0.5;
+            nb = (nb - 0.5) * contrast + 0.5;
+
+            // 3. 彩度 (Saturation)
+            const lum = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb;
+            nr = lum + (nr - lum) * saturation;
+            ng = lum + (ng - lum) * saturation;
+            nb = lum + (nb - lum) * saturation;
+
+            // 4. クランプ & 0~255
+            const R = Math.min(255, Math.max(0, Math.round(nr * 255)));
+            const G = Math.min(255, Math.max(0, Math.round(ng * 255)));
+            const B = Math.min(255, Math.max(0, Math.round(nb * 255)));
+
+            return { r: R, g: G, b: B };
+        }
+
+        // RGB平均値に基づく構成音（度数制限）
+        function getDegreeRestriction(totalAvg) {
+            if (totalAvg < 109) return { degrees: [1], label: "1/1 (Unison)" };
+            if (totalAvg < 218) return { degrees: [1, 5], label: "1, 5 (Power Chord)" };
+            if (totalAvg < 327) return { degrees: [1, 3, 5], label: "1, 3, 5 (Triad)" };
+            if (totalAvg < 436) return { degrees: [1, 3, 5, 6], label: "1, 3, 5, 6 (Sixth)" };
+            if (totalAvg < 545) return { degrees: [1, 2, 3, 5, 6], label: "1, 2, 3, 5, 6 (Pentatonic)" };
+            if (totalAvg < 654) return { degrees: [1, 2, 3, 4, 5, 6], label: "1, 2, 3, 4, 5, 6 (Hexatonic)" };
+            return { degrees: [1, 2, 3, 4, 5, 6, 7], label: "1, 2, 3, 4, 5, 6, 7 (Full Scale)" };
+        }
+
+        // RGB平均値に基づくアルペジオパターン
+        function getArpPatternMode(totalAvg) {
+            if (totalAvg < 255) return { mode: 'up', label: 'Up (上昇ループ)' };
+            if (totalAvg < 510) return { mode: 'updown', label: 'Up & Down (上昇/下降)' };
+            return { mode: 'random', label: 'Random (ランダム)' };
+        }
+
+
+        // --- 2. Web Audio Synthesis & Sequencer Engine ---
+        let audioCtx = null;
+        let masterGain = null;
+        let masterCompressor = null;
+        let dryGain = null;
+
+        let convolverNode = null;
+        let reverbSendGain = null;
+        let reverbReturnGain = null;
+
+        let delayNode = null;
+        let delayFeedbackGain = null;
+        let delaySendGain = null;
+        let delayReturnGain = null;
+
+        let isAudioInit = false;
+        let voicePool = [];
+        let currentWaveform = 'sawtooth';
+
+        // 16分音符シーケンサー用制御変数
+        let currentBPM = 98.0;
+        let nextNoteTime = 0.0;
+        let scheduleAheadTime = 0.1; // 100ms 先読み
+        let timerID = null;
+        let arpStepIndex = 0; // アルペジオ演奏ステップカウンター
+
+        // 全ドットRGB平均値状態
+        let currentTotalAvg = 380;
+        let currentAvgR = 128, currentAvgG = 128, currentAvgB = 128;
+
+        function createReverbImpulse(ctx, duration = 2.0) {
+            const sampleRate = ctx.sampleRate;
+            const length = Math.floor(sampleRate * duration);
+            const impulse = ctx.createBuffer(2, length, sampleRate);
+            for (let channel = 0; channel < 2; channel++) {
+                const data = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    const t = i / sampleRate;
+                    data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3.5);
+                }
+            }
+            return impulse;
+        }
+
+        function initAudio() {
+            if (isAudioInit) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // Dynamic Compressor
+            masterCompressor = audioCtx.createDynamicsCompressor();
+            masterCompressor.threshold.setValueAtTime(-12, audioCtx.currentTime);
+            masterCompressor.knee.setValueAtTime(8, audioCtx.currentTime);
+            masterCompressor.ratio.setValueAtTime(5, audioCtx.currentTime);
+
+            dryGain = audioCtx.createGain();
+            dryGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+            masterCompressor.connect(dryGain);
+
+            // Reverb
+            convolverNode = audioCtx.createConvolver();
+            convolverNode.buffer = createReverbImpulse(audioCtx, 2.2);
+
+            reverbSendGain = audioCtx.createGain();
+            reverbReturnGain = audioCtx.createGain();
+
+            const revVal = parseInt(document.getElementById('slider-rev').value) / 100.0;
+            reverbSendGain.gain.setValueAtTime(revVal, audioCtx.currentTime);
+            reverbReturnGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+            masterCompressor.connect(reverbSendGain);
+            reverbSendGain.connect(convolverNode);
+            convolverNode.connect(reverbReturnGain);
+
+            // Delay
+            delayNode = audioCtx.createDelay(2.0);
+            delayNode.delayTime.setValueAtTime(0.32, audioCtx.currentTime);
+
+            delayFeedbackGain = audioCtx.createGain();
+            delayFeedbackGain.gain.setValueAtTime(0.38, audioCtx.currentTime);
+
+            const delayFilter = audioCtx.createBiquadFilter();
+            delayFilter.type = 'lowpass';
+            delayFilter.frequency.setValueAtTime(2200, audioCtx.currentTime);
+
+            delaySendGain = audioCtx.createGain();
+            delayReturnGain = audioCtx.createGain();
+
+            const delayVal = parseInt(document.getElementById('slider-delay').value) / 100.0;
+            delaySendGain.gain.setValueAtTime(delayVal, audioCtx.currentTime);
+            delayReturnGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+            masterCompressor.connect(delaySendGain);
+            delaySendGain.connect(delayNode);
+            delayNode.connect(delayFilter);
+            delayFilter.connect(delayFeedbackGain);
+            delayFeedbackGain.connect(delayNode);
+            delayFilter.connect(delayReturnGain);
+
+            // Master Gain
+            masterGain = audioCtx.createGain();
+            const initVol = parseInt(document.getElementById('slider-vol').value) / 100.0;
+            masterGain.gain.setValueAtTime(initVol, audioCtx.currentTime);
+
+            dryGain.connect(masterGain);
+            reverbReturnGain.connect(masterGain);
+            delayReturnGain.connect(masterGain);
+
+            masterGain.connect(audioCtx.destination);
+
+            // Polyphonic Voice Pool
+            for (let i = 0; i < CONFIG.maxPolyphony; i++) {
+                voicePool.push(new PolyVoice(audioCtx, masterCompressor));
+            }
+
+            isAudioInit = true;
+
+            // 16分音符シーケンサースケジューラー起動
+            nextNoteTime = audioCtx.currentTime + 0.05;
+            scheduler();
+
+            const btn = document.getElementById('btn-audio-start');
+            btn.innerText = '🔊 オーディオ＆16分音符アルペジエーター稼働中';
+            btn.classList.add('text-emerald-400', 'border-emerald-500/50');
+        }
+
+        function ensureAudioContext() {
+            if (!isAudioInit) initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- Single Voice Class (Velocity対応) ---
+        class PolyVoice {
+            constructor(ctx, destination) {
+                this.ctx = ctx;
+                this.destination = destination;
+                this.active = false;
+                this.startTime = 0;
+            }
+
+            trigger(freq, r_out, g_out, b_out, waveType, velocity, schedTime) {
+                const now = schedTime || this.ctx.currentTime;
+                this.active = true;
+                this.startTime = now;
+
+                const sumRGB = r_out + g_out + b_out;
+
+                // ADSR Envelope
+                const attackTimeSec = (1.0 - (g_out / 255.0)) * 0.512;
+                const decayTimeSec = 1.024 - (g_out / 255.0) * (1.024 - 0.256);
+                const releaseTimeSec = 0.512;
+
+                // Filter Cutoff & Resonance
+                const cutoffHz = 128.0 + (b_out / 255.0) * (1280.0 - 128.0);
+                const resonanceQ = 0.5 + (sumRGB / 765.0) * (16.0 - 0.5);
+
+                // Create Oscillator
+                this.osc = this.ctx.createOscillator();
+                this.osc.type = waveType || 'sawtooth';
+                this.osc.frequency.setValueAtTime(freq, now);
+
+                // Filter Node
+                this.filter = this.ctx.createBiquadFilter();
+                this.filter.type = 'lowpass';
+                this.filter.frequency.setValueAtTime(cutoffHz, now);
+                this.filter.Q.setValueAtTime(resonanceQ, now);
+
+                // Gain Node (VelocityでPeak Volumeを動的に制御)
+                this.gain = this.ctx.createGain();
+                this.gain.gain.setValueAtTime(0.0001, now);
+
+                // Peak Volume is scaled directly by Velocity (RMS)
+                const basePeakVol = 0.25;
+                const peakVol = basePeakVol * Math.max(0.0, Math.min(1.0, velocity));
+
+                const attackEnd = now + Math.max(0.003, attackTimeSec);
+                this.gain.gain.linearRampToValueAtTime(peakVol, attackEnd);
+
+                // Decay Ramp down to 0
+                const decayEnd = attackEnd + Math.max(0.01, decayTimeSec);
+                this.gain.gain.exponentialRampToValueAtTime(0.0001, decayEnd);
+
+                // Routing
+                this.osc.connect(this.filter);
+                this.filter.connect(this.gain);
+                this.gain.connect(this.destination);
+
+                this.osc.start(now);
+
+                const totalDuration = attackTimeSec + decayTimeSec + releaseTimeSec + 0.1;
+                this.osc.stop(now + totalDuration);
+
+                setTimeout(() => {
+                    this.stop();
+                }, totalDuration * 1000);
+            }
+
+            stop() {
+                if (!this.active) return;
+                this.active = false;
+                try {
+                    if (this.osc) {
+                        this.osc.stop();
+                        this.osc.disconnect();
+                    }
+                } catch(e) {}
+            }
+        }
+
+        // --- 16分音符高精度シーケンサースケジューラー ---
+        function scheduler() {
+            while (nextNoteTime < audioCtx.currentTime + scheduleAheadTime) {
+                schedule16thNote(nextNoteTime);
+                advance16thNote();
+            }
+            timerID = setTimeout(scheduler, 25);
+        }
+
+        function advance16thNote() {
+            const secondsPerBeat = 60.0 / currentBPM;
+            const secondsPer16th = secondsPerBeat / 4.0;
+            nextNoteTime += secondsPer16th;
+        }
+
+        function schedule16thNote(time) {
+            // カメラが非アクティブ、またはVelocity (RMS) がほぼゼロ（映像の動きがない）場合は完全に音を出さない
+            const vel = isCameraActive ? currentCalculatedVelocity : 0.0;
+
+            // 1. UI 16分音符LED時点滅
+            flashBeatLED(vel);
+
+            if (!isCameraActive || vel <= 0.01) {
+                // カメラ停止時または映像の動きがない場合は発音とビジュアライザー発生をスキップ
+                arpStepIndex++;
+                return;
+            }
+
+            // 2. スケール・度数制限・アルペジオパターンの決定
+            let baseScaleObj = BASE_SCALES.majorC;
+            if (currentTotalAvg <= 255) {
+                baseScaleObj = BASE_SCALES.minor;
+            } else if (currentTotalAvg <= 511) {
+                baseScaleObj = BASE_SCALES.majorC;
+            } else {
+                baseScaleObj = BASE_SCALES.majorG;
+            }
+
+            const degreeObj = getDegreeRestriction(currentTotalAvg);
+            const arpModeObj = getArpPatternMode(currentTotalAvg);
+
+            // UIステータス更新
+            const scaleBadge = document.getElementById('current-scale-badge');
+            if (scaleBadge) scaleBadge.innerText = baseScaleObj.name;
+
+            const degBadge = document.getElementById('current-degrees-badge');
+            if (degBadge) degBadge.innerText = degreeObj.label;
+
+            const arpBadge = document.getElementById('current-arp-badge');
+            if (arpBadge) arpBadge.innerText = arpModeObj.label;
+
+            // 3. 度数制限に従う利用可能ノートリストの構築 (2オクターブ)
+            const availableNotes = [];
+            for (let oct = 0; oct < 2; oct++) {
+                for (let i = 0; i < degreeObj.degrees.length; i++) {
+                    const deg = degreeObj.degrees[i];
+                    const patternIndex = deg - 1;
+                    const semitones = baseScaleObj.pattern[patternIndex];
+                    const midiNote = baseScaleObj.root + (oct * 12) + semitones;
+                    availableNotes.push(midiNote);
+                }
+            }
+
+            // 4. アルペジオインデックスに従って音高を選択
+            let selectedMidi = availableNotes[0];
+            const noteCount = availableNotes.length;
+
+            if (arpModeObj.mode === 'up') {
+                selectedMidi = availableNotes[arpStepIndex % noteCount];
+            } else if (arpModeObj.mode === 'updown') {
+                const cycle = noteCount * 2 - 2;
+                const pos = arpStepIndex % (cycle > 0 ? cycle : 1);
+                const idx = pos < noteCount ? pos : cycle - pos;
+                selectedMidi = availableNotes[idx];
+            } else if (arpModeObj.mode === 'random') {
+                const randIdx = Math.floor(Math.random() * noteCount);
+                selectedMidi = availableNotes[randIdx];
+            }
+
+            const frequency = 440 * Math.pow(2, (selectedMidi - 69) / 12);
+
+            // 5. 音色モジュレーションパラメータ (上位追跡ドットから巡回取得)
+            let r_out = currentAvgR;
+            let g_out = currentAvgG;
+            let b_out = currentAvgB;
+            let col = Math.floor(Math.random() * CONFIG.gridCols);
+            let row = Math.floor(Math.random() * CONFIG.gridRows);
+
+            if (topMotionDotsBuffer.length > 0) {
+                const activeDot = topMotionDotsBuffer[arpStepIndex % topMotionDotsBuffer.length];
+                r_out = activeDot.r;
+                g_out = activeDot.g;
+                b_out = activeDot.b;
+                col = activeDot.col;
+                row = activeDot.row;
+            }
+
+            // 6. ポリフォニック発音（Velocity/RMS適用）＆3Dビジュアライザー発火
+            playSynthVoice(frequency, r_out, g_out, b_out, vel, time);
+            if (window.visualizer3D) {
+                window.visualizer3D.spawnExpandingCircle(col, row, r_out, g_out, b_out, vel);
+            }
+
+            arpStepIndex++;
+        }
+
+        function playSynthVoice(freq, r_out, g_out, b_out, velocity = 1.0, schedTime = null) {
+            if (!isAudioInit || !audioCtx) return;
+
+            let voice = voicePool.find(v => !v.active);
+            if (!voice) {
+                voice = voicePool.reduce((oldest, v) => (v.startTime < oldest.startTime ? v : oldest), voicePool[0]);
+                voice.stop();
+            }
+
+            voice.trigger(freq, r_out, g_out, b_out, currentWaveform, velocity, schedTime);
+        }
+
+        function flashBeatLED(vel = 1.0) {
+            const led = document.getElementById('sequencer-beat-led');
+            if (led) {
+                if (isCameraActive && vel > 0.05) {
+                    led.style.transform = `scale(${1.0 + vel * 0.5})`;
+                    led.style.backgroundColor = '#10b981';
+                    setTimeout(() => {
+                        led.style.transform = 'scale(1.0)';
+                        led.style.backgroundColor = '#059669';
+                    }, 80);
+                } else {
+                    led.style.transform = 'scale(0.9)';
+                    led.style.backgroundColor = '#334155';
+                }
+            }
+        }
+
+
+        // --- 3. Camera Engine, Calibration, RMS & Motion Tracking ---
+        let videoElement = null;
+        let offscreenCanvas = null;
+        let offscreenCtx = null;
+        let previewCanvas = null;
+        let previewCtx = null;
+
+        let cameraStream = null;
+        let isCameraActive = false;
+        let facingMode = 'user';
+
+        let sensitivityThreshold = 35;
+        let prevPixelData = null;
+        let topMotionDotsBuffer = [];
+
+        function setupCameraElements() {
+            videoElement = document.getElementById('offscreen-video');
+            offscreenCanvas = document.getElementById('offscreen-canvas');
+            offscreenCtx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+            previewCanvas = document.getElementById('preview-canvas');
+            previewCtx = previewCanvas.getContext('2d');
+
+            updateGridResolution(CONFIG.gridCols, CONFIG.gridRows);
+        }
+
+        function updateGridResolution(cols, rows) {
+            CONFIG.gridCols = cols;
+            CONFIG.gridRows = rows;
+
+            offscreenCanvas.width = cols;
+            offscreenCanvas.height = rows;
+            previewCanvas.width = cols * 10;
+            previewCanvas.height = rows * 10;
+
+            prevPixelData = new Uint8Array(cols * rows * 3);
+
+            if (window.visualizer3D) {
+                window.visualizer3D.rebuildMatrixGrid(cols, rows);
+            }
+        }
+
+        async function startCamera() {
+            try {
+                if (cameraStream) {
+                    cameraStream.getTracks().forEach(track => track.stop());
+                }
+
+                const constraints = {
+                    video: {
+                        facingMode: facingMode,
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                };
+
+                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = cameraStream;
+                await videoElement.play();
+
+                isCameraActive = true;
+                if (window.visualizer3D && window.visualizer3D.matrixGroup) {
+                    window.visualizer3D.matrixGroup.visible = true;
+                }
+
+                document.getElementById('btn-camera-text').innerText = 'カメラ停止';
+                document.getElementById('camera-status-badge').innerText = 'カメラライブ';
+                document.getElementById('camera-status-badge').className = 'text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full';
+            } catch (err) {
+                console.warn('カメラの起動に失敗しました:', err);
+                stopCamera();
+                document.getElementById('camera-status-badge').innerText = 'カメラ利用不可';
+                document.getElementById('camera-status-badge').className = 'text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full';
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            isCameraActive = false;
+            topMotionDotsBuffer = [];
+            currentCalculatedVelocity = 0.0;
+            frameMotionHistory.length = 0;
+
+            // プレビューおよび3Dグリッドを完全に透明・非表示化
+            if (previewCtx && previewCanvas) {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            }
+            if (window.visualizer3D && window.visualizer3D.matrixGroup) {
+                window.visualizer3D.matrixGroup.visible = false;
+            }
+
+            document.getElementById('btn-camera-text').innerText = 'カメラ起動';
+            document.getElementById('camera-status-badge').innerText = 'カメラ停止中';
+            document.getElementById('camera-status-badge').className = 'text-xs bg-slate-700/80 text-slate-300 border border-slate-600/80 px-2 py-0.5 rounded-full';
+
+            const activeDotsBadge = document.getElementById('active-dots-badge');
+            if (activeDotsBadge) activeDotsBadge.innerText = `0 / ${maxMotionDotsCount}`;
+
+            const rmsBadge = document.getElementById('rms-velocity-badge');
+            if (rmsBadge) {
+                rmsBadge.innerText = '0 %';
+                rmsBadge.className = 'px-2 py-0.5 rounded-md font-mono font-bold bg-slate-700/50 text-slate-400 border border-slate-600/40 min-w-[65px] text-center';
+            }
+        }
+
+        // 映像変化量のRMS (Root Mean Square) 動的計算関数
+        function calculateRMSVelocity(nowTimeMs) {
+            if (!isCameraActive) return 0.0;
+
+            // タイムウィンドウ外の古い履歴データを削除
+            const cutoff = nowTimeMs - rmsWindowMs;
+            while (frameMotionHistory.length > 0 && frameMotionHistory[0].time < cutoff) {
+                frameMotionHistory.shift();
+            }
+
+            if (frameMotionHistory.length === 0) {
+                return 0.0;
+            }
+
+            // 二乗平均平方根 (Root Mean Square) の計算
+            let sumSq = 0;
+            for (let i = 0; i < frameMotionHistory.length; i++) {
+                sumSq += frameMotionHistory[i].diffSq;
+            }
+
+            const meanSq = sumSq / frameMotionHistory.length;
+            const rms = Math.sqrt(meanSq); // 0.0 ~ 1.0 付近
+
+            // ノイズ閾値カットオフ ＆ ゲイン適用
+            const deadZone = 0.012; // 静止カメラの微小ノイズカット
+            if (rms <= deadZone) return 0.0;
+
+            const normalizedVal = (rms - deadZone) * rmsGain;
+            return Math.min(1.0, Math.max(0.0, normalizedVal));
+        }
+
+        // フレーム処理 ＆ キャリブレーション ＆ RMS計算 ＆ TOP Nソート
+        function processCameraFrame(delta) {
+            const cols = CONFIG.gridCols;
+            const rows = CONFIG.gridRows;
+            const nowMs = performance.now();
+
+            // ★ カメラ非アクティブ時は全要素を透明・クリアにして処理を終了 ★
+            if (!isCameraActive) {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                if (window.visualizer3D && window.visualizer3D.matrixGroup) {
+                    window.visualizer3D.matrixGroup.visible = false;
+                }
+                topMotionDotsBuffer = [];
+                currentCalculatedVelocity = 0.0;
+                return;
+            }
+
+            if (!videoElement || videoElement.readyState !== videoElement.HAVE_ENOUGH_DATA) {
+                return;
+            }
+
+            // カメラフレームを低解像度キャンバスへ描画
+            offscreenCtx.drawImage(videoElement, 0, 0, cols, rows);
+
+            const rawFrameData = offscreenCtx.getImageData(0, 0, cols, rows).data;
+            
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            const cellW = previewCanvas.width / cols;
+            const cellH = previewCanvas.height / rows;
+
+            let sumR = 0, sumG = 0, sumB = 0;
+            let totalFrameDiffSum = 0; // フレーム全体変化量集計
+            const candidateMotionDots = [];
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const i4 = (r * cols + c) * 4;
+                    const i3 = (r * cols + c) * 3;
+
+                    const rawR = rawFrameData[i4];
+                    const rawG = rawFrameData[i4 + 1];
+                    const rawB = rawFrameData[i4 + 2];
+
+                    // 前処理キャリブレーション実行 (輝度, コントラスト, 彩度)
+                    const calib = applyRGBPixelCalibration(
+                        rawR, rawG, rawB,
+                        calibBrightness, calibContrast, calibSaturation
+                    );
+
+                    const r_out = calib.r;
+                    const g_out = calib.g;
+                    const b_out = calib.b;
+
+                    sumR += r_out;
+                    sumG += g_out;
+                    sumB += b_out;
+
+                    // プレビューモニターの更新
+                    previewCtx.fillStyle = `rgb(${r_out},${g_out},${b_out})`;
+                    previewCtx.fillRect(c * cellW, r * cellH, cellW, cellH);
+
+                    // 3Dマトリックスグリッドの色更新
+                    if (window.visualizer3D) {
+                        window.visualizer3D.updateMatrixDotColor(c, r, r_out, g_out, b_out);
+                    }
+
+                    // 前回フレームとのピクセル単位差分
+                    const prevR = prevPixelData[i3];
+                    const prevG = prevPixelData[i3 + 1];
+                    const prevB = prevPixelData[i3 + 2];
+
+                    // 0.0 ~ 1.0 の正規化変化量
+                    const pixDiffNorm = (Math.abs(r_out - prevR) + Math.abs(g_out - prevG) + Math.abs(b_out - prevB)) / (255.0 * 3.0);
+                    totalFrameDiffSum += pixDiffNorm;
+
+                    const motionScore = Math.abs(r_out - prevR) + Math.abs(g_out - prevG) + Math.abs(b_out - prevB);
+
+                    if (motionScore > sensitivityThreshold) {
+                        candidateMotionDots.push({
+                            col: c,
+                            row: r,
+                            r: r_out,
+                            g: g_out,
+                            b: b_out,
+                            score: motionScore
+                        });
+                    }
+
+                    // 前フレームピクセル保持
+                    prevPixelData[i3]     = r_out;
+                    prevPixelData[i3 + 1] = g_out;
+                    prevPixelData[i3 + 2] = b_out;
+                }
+            }
+
+            // 今フレームの平均ピクセル変化量を履歴に追加 (RMS用)
+            const totalPixels = cols * rows;
+            const avgFrameDiffNorm = totalFrameDiffSum / totalPixels;
+            frameMotionHistory.push({
+                time: nowMs,
+                diffSq: avgFrameDiffNorm * avgFrameDiffNorm // 二乗値
+            });
+
+            // RMS Velocity のリアルタイム更新
+            currentCalculatedVelocity = calculateRMSVelocity(nowMs);
+
+            // UI Velocity (RMS) 表示バッジの更新
+            const rmsBadge = document.getElementById('rms-velocity-badge');
+            if (rmsBadge) {
+                const velPct = Math.round(currentCalculatedVelocity * 100);
+                rmsBadge.innerText = `${velPct} %`;
+                if (velPct === 0) {
+                    rmsBadge.className = 'px-2 py-0.5 rounded-md font-mono font-bold bg-slate-700/50 text-slate-400 border border-slate-600/40 min-w-[65px] text-center';
+                } else {
+                    rmsBadge.className = 'px-2 py-0.5 rounded-md font-mono font-bold bg-rose-500/30 text-rose-200 border border-rose-400/40 min-w-[65px] text-center';
+                }
+            }
+
+            // 全体RGB平均値の更新
+            currentAvgR = sumR / totalPixels;
+            currentAvgG = sumG / totalPixels;
+            currentAvgB = sumB / totalPixels;
+            currentTotalAvg = currentAvgR + currentAvgG + currentAvgB; // 0 ~ 765
+
+            // RGB平均値から BPM [60 ～ 136] の算出
+            currentBPM = Math.min(136, Math.max(60, 60 + (currentTotalAvg / 765.0) * (136 - 60)));
+
+            const bpmBadge = document.getElementById('bpm-display-badge');
+            if (bpmBadge) bpmBadge.innerText = `${Math.round(currentBPM)} BPM`;
+
+            // 変化量が大きいドットを降順ソートし、指定した最大数 (maxMotionDotsCount: 1〜64) 抽出
+            candidateMotionDots.sort((a, b) => b.score - a.score);
+            topMotionDotsBuffer = candidateMotionDots.slice(0, maxMotionDotsCount);
+
+            const activeDotsBadge = document.getElementById('active-dots-badge');
+            if (activeDotsBadge) activeDotsBadge.innerText = `${topMotionDotsBuffer.length} / ${maxMotionDotsCount}`;
+
+            // プレビューモニター上に追跡ドットを枠強調表示
+            previewCtx.strokeStyle = '#10b981';
+            previewCtx.lineWidth = 1.5;
+            for (let i = 0; i < topMotionDotsBuffer.length; i++) {
+                const d = topMotionDotsBuffer[i];
+                previewCtx.strokeRect(d.col * cellW + 0.5, d.row * cellH + 0.5, cellW - 1, cellH - 1);
+            }
+        }
+
+        // 手動タップ/クリック時の個別発音関数
+        function triggerManualPixelEvent(col, row, r_out, g_out, b_out) {
+            if (!isCameraActive) return;
+            const freq = 220 + (r_out / 255) * 880;
+            const tapVelocity = 0.85; // タップ操作は標準 Velocity 0.85
+            playSynthVoice(freq, r_out, g_out, b_out, tapVelocity);
+            if (window.visualizer3D) {
+                window.visualizer3D.spawnExpandingCircle(col, row, r_out, g_out, b_out, tapVelocity);
+            }
+        }
+
+
+        // --- 4. Three.js 3D Visualizer Class ---
+        class Visualizer3D {
+            constructor(container) {
+                this.container = container;
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+
+                this.matrixDots = [];
+                this.activeCircles = [];
+                this.circlePool = [];
+
+                this.worldWidth = 16.0;
+                this.worldHeight = 12.0;
+
+                this.init();
+            }
+
+            init() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x030712);
+                this.scene.fog = new THREE.FogExp2(0x030712, 0.025);
+
+                this.camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 0, 15);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.container.appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxDistance = 30;
+                this.controls.minDistance = 5;
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+                this.scene.add(ambientLight);
+
+                const pointLight = new THREE.PointLight(0x10b981, 2, 30);
+                pointLight.position.set(0, 0, 10);
+                this.scene.add(pointLight);
+
+                this.createBackgroundDust();
+                this.rebuildMatrixGrid(CONFIG.gridCols, CONFIG.gridRows);
+
+                window.addEventListener('resize', () => this.onResize());
+                this.renderer.domElement.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+            }
+
+            createBackgroundDust() {
+                const count = 350;
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                for (let i = 0; i < count; i++) {
+                    positions[i * 3]     = (Math.random() - 0.5) * 45;
+                    positions[i * 3 + 1] = (Math.random() - 0.5) * 35;
+                    positions[i * 3 + 2] = -Math.random() * 55;
+                }
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const material = new THREE.PointsMaterial({
+                    color: 0x10b981,
+                    size: 0.15,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending
+                });
+                const dust = new THREE.Points(geometry, material);
+                this.scene.add(dust);
+            }
+
+            rebuildMatrixGrid(cols, rows) {
+                if (this.matrixGroup) {
+                    this.scene.remove(this.matrixGroup);
+                }
+
+                this.matrixGroup = new THREE.Group();
+                this.matrixDots = [];
+
+                const aspect = cols / rows;
+                this.worldHeight = 11.0;
+                this.worldWidth = this.worldHeight * aspect;
+
+                const stepX = this.worldWidth / cols;
+                const stepY = this.worldHeight / rows;
+                const radius = Math.min(stepX, stepY) * 0.35;
+
+                const circleGeo = new THREE.CircleGeometry(radius, 16);
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        const x = -this.worldWidth / 2 + (c + 0.5) * stepX;
+                        const y = this.worldHeight / 2 - (r + 0.5) * stepY;
+
+                        const mat = new THREE.MeshBasicMaterial({
+                            color: 0x0f172a,
+                            transparent: true,
+                            opacity: 0.65,
+                            side: THREE.DoubleSide
+                        });
+
+                        const mesh = new THREE.Mesh(circleGeo, mat);
+                        mesh.position.set(x, y, 0);
+
+                        this.matrixGroup.add(mesh);
+                        this.matrixDots.push(mesh);
+                    }
+                }
+
+                // 初期状態（カメラ非起動時）は非表示（完全透明）
+                this.matrixGroup.visible = isCameraActive;
+
+                this.scene.add(this.matrixGroup);
+            }
+
+            updateMatrixDotColor(col, row, r, g, b) {
+                const idx = row * CONFIG.gridCols + col;
+                if (this.matrixDots[idx]) {
+                    this.matrixDots[idx].material.color.setRGB(r / 255.0, g / 255.0, b / 255.0);
+                }
+            }
+
+            // Z軸奥へと拡大・薄く拡散するサークル生成 (Velocityで光度・サイズをスケール)
+            spawnExpandingCircle(col, row, r, g, b, velocity = 1.0) {
+                if (!isCameraActive) return; // カメラが起動していない時はサークル生成しない
+
+                const cols = CONFIG.gridCols;
+                const rows = CONFIG.gridRows;
+
+                const stepX = this.worldWidth / cols;
+                const stepY = this.worldHeight / rows;
+                const startX = -this.worldWidth / 2 + (col + 0.5) * stepX;
+                const startY = this.worldHeight / 2 - (row + 0.5) * stepY;
+
+                let circleMesh = null;
+
+                if (this.circlePool.length > 0) {
+                    circleMesh = this.circlePool.pop();
+                } else {
+                    const ringGeo = new THREE.RingGeometry(0.1, 0.45, 32);
+                    const ringMat = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.95,
+                        side: THREE.DoubleSide,
+                        blending: THREE.AdditiveBlending
+                    });
+                    circleMesh = new THREE.Mesh(ringGeo, ringMat);
+                }
+
+                const initialScale = 0.5 + velocity * 0.8;
+                circleMesh.position.set(startX, startY, 0);
+                circleMesh.scale.set(initialScale, initialScale, initialScale);
+                circleMesh.material.color.setRGB(r / 255.0, g / 255.0, b / 255.0);
+                circleMesh.material.opacity = Math.min(1.0, 0.3 + velocity * 0.7);
+
+                this.scene.add(circleMesh);
+
+                this.activeCircles.push({
+                    mesh: circleMesh,
+                    speedZ: CONFIG.visualizerSpeed * (0.8 + velocity * 0.4),
+                    expandRate: 3.2 * (0.8 + velocity * 0.4),
+                    fadeRate: 0.85
+                });
+            }
+
+            update(delta) {
+                if (this.controls) this.controls.update();
+
+                for (let i = this.activeCircles.length - 1; i >= 0; i--) {
+                    const item = this.activeCircles[i];
+                    const mesh = item.mesh;
+
+                    mesh.position.z -= item.speedZ * delta;
+                    mesh.scale.x += item.expandRate * delta;
+                    mesh.scale.y += item.expandRate * delta;
+                    mesh.material.opacity -= item.fadeRate * delta;
+
+                    if (mesh.material.opacity <= 0 || mesh.position.z < -CONFIG.visualizerZDepth) {
+                        this.scene.remove(mesh);
+                        this.activeCircles.splice(i, 1);
+                        this.circlePool.push(mesh);
+                    }
+                }
+
+                this.renderer.render(this.scene, this.camera);
+            }
+
+            onResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            onPointerDown(event) {
+                if (!isCameraActive) return;
+
+                ensureAudioContext();
+
+                this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObjects(this.matrixDots);
+
+                if (intersects.length > 0) {
+                    const hit = intersects[0].object;
+                    const index = this.matrixDots.indexOf(hit);
+                    if (index !== -1) {
+                        const cols = CONFIG.gridCols;
+                        const c = index % cols;
+                        const r = Math.floor(index / cols);
+
+                        const imgData = offscreenCtx.getImageData(c, r, 1, 1).data;
+                        const calib = applyRGBPixelCalibration(
+                            imgData[0], imgData[1], imgData[2],
+                            calibBrightness, calibContrast, calibSaturation
+                        );
+
+                        triggerManualPixelEvent(c, r, calib.r, calib.g, calib.b);
+                    }
+                }
+            }
+        }
+
+
+        // --- 5. UI Handlers & Main Initialization ---
+        function setupUIHandlers() {
+            // Guide Window Minimize Toggle
+            const btnToggleGuide = document.getElementById('btn-toggle-guide');
+            const guideContent = document.getElementById('panel-guide-content');
+            const guideToggleIcon = document.getElementById('guide-toggle-icon');
+            const guideToggleText = document.getElementById('guide-toggle-text');
+
+            btnToggleGuide.addEventListener('click', () => {
+                if (guideContent.classList.contains('hidden')) {
+                    guideContent.classList.remove('hidden');
+                    guideToggleIcon.innerText = '−';
+                    guideToggleText.innerText = '小さくする';
+                } else {
+                    guideContent.classList.add('hidden');
+                    guideToggleIcon.innerText = '＋';
+                    guideToggleText.innerText = '展開';
+                }
+            });
+
+            // Settings Window Minimize Toggle
+            const btnToggleSettings = document.getElementById('btn-toggle-settings');
+            const settingsContent = document.getElementById('panel-settings-content');
+            const settingsToggleIcon = document.getElementById('settings-toggle-icon');
+            const settingsToggleText = document.getElementById('settings-toggle-text');
+
+            btnToggleSettings.addEventListener('click', () => {
+                if (settingsContent.classList.contains('hidden')) {
+                    settingsContent.classList.remove('hidden');
+                    settingsToggleIcon.innerText = '−';
+                    settingsToggleText.innerText = '小さくする';
+                } else {
+                    settingsContent.classList.add('hidden');
+                    settingsToggleIcon.innerText = '＋';
+                    settingsToggleText.innerText = '展開';
+                }
+            });
+
+            // Camera Toggle
+            document.getElementById('btn-camera-toggle').addEventListener('click', () => {
+                ensureAudioContext();
+                if (isCameraActive) {
+                    stopCamera();
+                } else {
+                    startCamera();
+                }
+            });
+
+            // Camera Flip
+            document.getElementById('btn-camera-flip').addEventListener('click', () => {
+                facingMode = (facingMode === 'user') ? 'environment' : 'user';
+                if (isCameraActive) {
+                    startCamera();
+                }
+            });
+
+            // Active Tracking Motion Dots Slider (1 to 64)
+            const sliderMaxDots = document.getElementById('slider-max-dots');
+            const maxDotsVal = document.getElementById('max-dots-val');
+            sliderMaxDots.addEventListener('input', (e) => {
+                maxMotionDotsCount = parseInt(e.target.value);
+                maxDotsVal.innerText = `${maxMotionDotsCount}`;
+                const activeDotsBadge = document.getElementById('active-dots-badge');
+                if (activeDotsBadge) {
+                    activeDotsBadge.innerText = `${topMotionDotsBuffer.length} / ${maxMotionDotsCount}`;
+                }
+            });
+
+            // RMS Window Time Slider (10ms ~ 2000ms)
+            document.getElementById('slider-rms-window').addEventListener('input', (e) => {
+                rmsWindowMs = parseInt(e.target.value);
+                document.getElementById('rms-window-val').innerText = `${rmsWindowMs} ms`;
+            });
+
+            // RMS Gain Slider
+            document.getElementById('slider-rms-gain').addEventListener('input', (e) => {
+                rmsGain = parseFloat(e.target.value);
+                document.getElementById('rms-gain-val').innerText = `${rmsGain.toFixed(1)}x`;
+            });
+
+            // Calibration Sliders
+            document.getElementById('slider-brightness').addEventListener('input', (e) => {
+                calibBrightness = parseFloat(e.target.value);
+                document.getElementById('brightness-val').innerText = `${calibBrightness.toFixed(2)}x`;
+            });
+
+            document.getElementById('slider-contrast').addEventListener('input', (e) => {
+                calibContrast = parseFloat(e.target.value);
+                document.getElementById('contrast-val').innerText = `${calibContrast.toFixed(2)}x`;
+            });
+
+            document.getElementById('slider-saturation').addEventListener('input', (e) => {
+                calibSaturation = parseFloat(e.target.value);
+                document.getElementById('saturation-val').innerText = `${calibSaturation.toFixed(2)}x`;
+            });
+
+            // Sensitivity Slider
+            const sensitivitySlider = document.getElementById('slider-sensitivity');
+            const sensitivityVal = document.getElementById('sensitivity-val');
+            sensitivitySlider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                sensitivityThreshold = val;
+                if (val < 25) sensitivityVal.innerText = `高 (${val})`;
+                else if (val > 50) sensitivityVal.innerText = `低 (${val})`;
+                else sensitivityVal.innerText = `中 (${val})`;
+            });
+
+            // Grid Resolution Select
+            document.getElementById('select-grid-res').addEventListener('change', (e) => {
+                const val = e.target.value;
+                document.getElementById('grid-res-val').innerText = val.replace('x', ' × ');
+                const [c, r] = val.split('x').map(Number);
+                updateGridResolution(c, r);
+            });
+
+            // Waveform Select
+            document.getElementById('select-waveform').addEventListener('change', (e) => {
+                currentWaveform = e.target.value;
+            });
+
+            // Master Volume
+            const volSlider = document.getElementById('slider-vol');
+            const volVal = document.getElementById('vol-val');
+            volSlider.addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                volVal.innerText = `${v}%`;
+                if (masterGain && audioCtx) {
+                    masterGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Reverb Send Level
+            document.getElementById('slider-rev').addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                document.getElementById('rev-val').innerText = `${v}%`;
+                if (reverbSendGain && audioCtx) {
+                    reverbSendGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Delay Send Level
+            document.getElementById('slider-delay').addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                document.getElementById('delay-val').innerText = `${v}%`;
+                if (delaySendGain && audioCtx) {
+                    delaySendGain.gain.setValueAtTime(v / 100.0, audioCtx.currentTime);
+                }
+            });
+
+            // Audio Enable Button
+            document.getElementById('btn-audio-start').addEventListener('click', ensureAudioContext);
+        }
+
+        // --- 6. Main Animation & Render Loop ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+
+            // 1. 低解像度化・キャリブレーション・RMS計算・TOP N動体トラッキング
+            processCameraFrame(delta);
+
+            // 2. 3Dビジュアライザー描画
+            if (window.visualizer3D) {
+                window.visualizer3D.update(delta);
+            }
+        }
+
+        // --- Entry Point ---
+        window.addEventListener('DOMContentLoaded', () => {
+            setupCameraElements();
+            setupUIHandlers();
+
+            const container = document.getElementById('canvas-container');
+            window.visualizer3D = new Visualizer3D(container);
+
+            animate();
+        });
+    </script>
+</body>
+</html>
